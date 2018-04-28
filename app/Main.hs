@@ -80,7 +80,8 @@ serverApp Env{..} pending = do
       `finally` atomically (modifyTVar vClients $ IM.delete i)
 
 main :: IO ()
-main = withGetOpt "PATH" opts $ \opt [filePath] -> do
+main = withGetOpt "" opts $ \opt _ -> do
+  let filePath = maybe "content.txt" id $ opt ^. #file
   vFreshClientId <- newTVarIO 0
   vClients <- newTVarIO IM.empty
   vCurrent <- T.lines <$> T.readFile filePath >>= newTVarIO
@@ -92,4 +93,5 @@ main = withGetOpt "PATH" opts $ \opt [filePath] -> do
     $ websocketsOr defaultConnectionOptions (serverApp Env{..}) app
   where
     opts = #port @= optLastArg "p" ["port"] "port" "PORT"
+      <: #file @= optLastArg "f" ["file"] "Content path" "PATH"
       <: nil
