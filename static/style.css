@@ -1,0 +1,86 @@
+.hidden {
+  display: none;
+}
+
+#container {
+  width: 50em;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+body {
+  background:
+  radial-gradient(circle, transparent 20%, slategray 20%, slategray 80%, transparent 80%, transparent),
+  radial-gradient(circle, transparent 20%, slategray 20%, slategray 80%, transparent 80%, transparent) 50px 50px,
+  linear-gradient(#A8B1BB 8px, transparent 8px) 0 -4px,
+  linear-gradient(90deg, #A8B1BB 8px, transparent 8px) -4px 0;
+  background-color: slategray;
+  background-size:100px 100px, 100px 100px, 50px 50px, 50px 50px;
+}
+
+#mainBlock {
+  margin: 1em;
+}
+
+article {
+  background: white;
+  min-height: 40em;
+  padding: 2em;
+  border-bottom-left-radius: 1em;
+  border-bottom-right-radius: 1em;
+}
+
+textarea {
+  text-rendering: auto;
+  color: initial;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-transform: none;
+  text-indent: 0px;
+  text-shadow: none;
+  display: inline-block;
+  text-align: start;
+  margin: 0em;
+  font-family:Consolas,Monaco,Lucida Console,Liberation Mono,DejaVu Sans Mono,Bitstream Vera Sans Mono,Courier New, monospace;
+  font-size: 1em;
+  width:100%;
+  heght: 80%;
+}
+
+button {
+  background-color: #4CAF50; /* Green */
+  border: none;
+  color: white;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  width: 100%;
+}
+
+.alert {
+  padding: 20px;
+  background-color: #f44336; /* Red */
+  color: white;
+  margin-bottom: 15px;
+  opacity: 1;
+  transition: opacity 0.6s; /* 600ms to fade out */
+}
+
+/* The close button */
+.closebtn {
+  margin-left: 15px;
+  color: white;
+  font-weight: bold;
+  float: right;
+  font-size: 22px;
+  line-height: 20px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+/* When moving the mouse over the close button */
+.closebtn:hover {
+  color: black;
+}

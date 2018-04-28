@@ -1,0 +1,7 @@
+Hello, our world!
+
+Haskell-jp
+
+New wiki
+
+Test content

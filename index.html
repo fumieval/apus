@@ -1,0 +1,75 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/markdown.js"></script>
+</head>
+<body>
+  <div id="container">
+    <div id="alerts">
+    </div>
+    <main id="mainBlock">
+      <div>
+        <button id="edit">Edit</button>
+      </div>
+      <article id="articleContent">
+      </article>
+    </main>
+    <div id="editBlock" class="hidden">
+      <textarea id="textEdit" rows="20"></textarea>
+      <div>
+        <button id="submit">Submit</button>
+      </div>
+    </div>
+  </div>
+</body>
+<script>
+  var mainBlock = document.getElementById("mainBlock");
+  var editBlock = document.getElementById("editBlock")
+  var mainArticle = document.getElementById("articleContent");
+  var textEdit = document.getElementById("textEdit");
+  var submitButton = document.getElementById("submit");
+  var editButton = document.getElementById("edit");
+
+  const socket = new WebSocket("ws://" + location.host + "/");
+
+  socket.addEventListener('open', function (event) {
+    textEdit.addEventListener('input', function(event){
+      socket.send(JSON.stringify({tag: "Draft", contents: textEdit.value}));
+    });
+    submitButton.addEventListener('click', function(event){
+      socket.send(JSON.stringify({tag: "Submit"}));
+      editBlock.classList.add("hidden");
+      mainBlock.classList.remove("hidden");
+    });
+  });
+
+  function addAlert (msg){
+    var alerts = document.getElementById("alerts");
+    var alertDiv = document.createElement("div");
+    alertDiv.classList.add("alert");
+    alertDiv.innerText = msg;
+    var closeBtn = document.createElement("span");
+    closeBtn.innerText = "×";
+    closeBtn.classList.add("closeBtn");
+    closeBtn.addEventListener('click', function(event){
+      alertDiv.style.display='none';
+      setTimeout(function(){ alerts.removeChild(alertDiv); }, 600);
+    })
+    alertDiv.appendChild(closeBtn);
+    alerts.appendChild(alertDiv);
+  }
+  socket.addEventListener('close', function (event) {
+    addAlert("Connection closed. Refresh to reconnect");
+  });
+
+  socket.addEventListener('message', function (event) {
+    mainArticle.innerText = event.data;
+    textEdit.value = event.data;
+  });
+  editButton.addEventListener('click', function(event){
+    editBlock.classList.remove("hidden");
+    mainBlock.classList.add("hidden");
+  });
+</script>
+</html>
