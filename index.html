@@ -31,6 +31,7 @@
   var submitButton = document.getElementById("submit");
   var editButton = document.getElementById("edit");
   var alert = document.getElementById("connection-alert");
+  var hasLocalChange = false;
 
   function connect(interval){
     const socket = new WebSocket("ws://" + location.host + "/");
@@ -38,8 +39,11 @@
     socket.addEventListener('open', function (event) {
       alert.classList.add("hidden");
       textEdit.addEventListener('input', function(event){
+        hasLocalChange = true;
         socket.send(JSON.stringify({tag: "Draft", contents: textEdit.value}));
+        hasLocalChange = false;
       });
+
       submitButton.addEventListener('click', function(event){
         socket.send(JSON.stringify({tag: "Submit"}));
         editBlock.classList.add("hidden");
@@ -49,6 +53,12 @@
         editBlock.classList.remove("hidden");
         mainBlock.classList.add("hidden");
       });
+
+      function heartbeat(){
+        socket.send(JSON.stringify({tag: "Heartbeat"}));
+        setTimeout(heartbeat, 10000)
+      }
+      heartbeat();
     });
 
     socket.addEventListener('close', function (event) {
@@ -66,8 +76,10 @@
     });
 
     socket.addEventListener('message', function (event) {
-      mainArticle.innerText = event.data;
-      textEdit.value = event.data;
+      if (!hasLocalChange){
+        mainArticle.innerText = event.data;
+        textEdit.value = event.data;
+      }
     });
   }
   connect(1);

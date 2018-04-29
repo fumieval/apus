@@ -27,6 +27,7 @@ data Env = Env
 
 data ApusReq = Submit
   | Draft !Text
+  | Heartbeat
   deriving Generic
 instance FromJSON ApusReq
 instance ToJSON ApusReq
@@ -76,6 +77,7 @@ serverApp Env{..} pending = do
             Just doc -> updateArticle Env{..} i doc
           Just (Draft txt) -> atomically $ modifyTVar vDraft
             $ IM.insert i $! T.lines txt
+          Just Heartbeat -> return ()
 
       `finally` atomically (modifyTVar vClients $ IM.delete i)
 
