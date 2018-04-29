@@ -2,11 +2,11 @@
 <head>
   <meta charset="utf-8">
   <link rel="stylesheet" href="/style.css">
-  <script src="/markdown.js"></script>
 </head>
 <body>
   <div id="container">
-    <div id="alerts">
+    <div id="connection-alert" class="alert">
+      Connecting...
     </div>
     <main id="mainBlock">
       <div>
@@ -30,46 +30,47 @@
   var textEdit = document.getElementById("textEdit");
   var submitButton = document.getElementById("submit");
   var editButton = document.getElementById("edit");
+  var alert = document.getElementById("connection-alert");
 
-  const socket = new WebSocket("ws://" + location.host + "/");
+  function connect(interval){
+    const socket = new WebSocket("ws://" + location.host + "/");
 
-  socket.addEventListener('open', function (event) {
-    textEdit.addEventListener('input', function(event){
-      socket.send(JSON.stringify({tag: "Draft", contents: textEdit.value}));
+    socket.addEventListener('open', function (event) {
+      alert.classList.add("hidden");
+      textEdit.addEventListener('input', function(event){
+        socket.send(JSON.stringify({tag: "Draft", contents: textEdit.value}));
+      });
+      submitButton.addEventListener('click', function(event){
+        socket.send(JSON.stringify({tag: "Submit"}));
+        editBlock.classList.add("hidden");
+        mainBlock.classList.remove("hidden");
+      });
+      editButton.addEventListener('click', function(event){
+        editBlock.classList.remove("hidden");
+        mainBlock.classList.add("hidden");
+      });
     });
-    submitButton.addEventListener('click', function(event){
-      socket.send(JSON.stringify({tag: "Submit"}));
-      editBlock.classList.add("hidden");
-      mainBlock.classList.remove("hidden");
-    });
-  });
 
-  function addAlert (msg){
-    var alerts = document.getElementById("alerts");
-    var alertDiv = document.createElement("div");
-    alertDiv.classList.add("alert");
-    alertDiv.innerText = msg;
-    var closeBtn = document.createElement("span");
-    closeBtn.innerText = "×";
-    closeBtn.classList.add("closeBtn");
-    closeBtn.addEventListener('click', function(event){
-      alertDiv.style.display='none';
-      setTimeout(function(){ alerts.removeChild(alertDiv); }, 600);
-    })
-    alertDiv.appendChild(closeBtn);
-    alerts.appendChild(alertDiv);
+    socket.addEventListener('close', function (event) {
+      alert.classList.remove("hidden");
+      function countdown(count){
+        if (count <= 0)
+        {
+          connect(interval * 2);
+        } else {
+          alert.innerText = "Connection closed. Retrying in " + count + "s...";
+          setTimeout(function(){ countdown(count - 1); }, 1000);
+        }
+      }
+      countdown(interval)
+    });
+
+    socket.addEventListener('message', function (event) {
+      mainArticle.innerText = event.data;
+      textEdit.value = event.data;
+    });
   }
-  socket.addEventListener('close', function (event) {
-    addAlert("Connection closed. Refresh to reconnect");
-  });
+  connect(1);
 
-  socket.addEventListener('message', function (event) {
-    mainArticle.innerText = event.data;
-    textEdit.value = event.data;
-  });
-  editButton.addEventListener('click', function(event){
-    editBlock.classList.remove("hidden");
-    mainBlock.classList.add("hidden");
-  });
 </script>
 </html>
