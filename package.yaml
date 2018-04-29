@@ -20,23 +20,29 @@ extra-source-files:
 description:         Please see the README on Github at <https://github.com/githubuser/apus#readme>
 
 dependencies:
-- base >= 4.7 && < 5
 - aeson
+- base >= 4.7 && < 5
 - bytestring
 - containers
 - diff3
+- directory
+- extensible
+- filepath
 - hashable
+- http-client
+- http-client-tls
+- http-types
 - rio
-- scotty
 - stm
 - text
 - time
+- transformers
 - wai
 - wai-middleware-static
 - wai-websockets
 - warp
 - websockets
-- extensible
+- yaml
 
 executables:
   apus-exe:
@@ -45,3 +51,4 @@ executables:
     ghc-options:
     - -threaded
     - -Wall
+    - -O2

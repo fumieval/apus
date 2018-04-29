@@ -1,4 +1,4 @@
-Hello, our world!
+Hello, world!
 
 Haskell-jp
 
