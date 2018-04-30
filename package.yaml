@@ -45,3 +45,4 @@ executables:
     ghc-options:
     - -threaded
     - -Wall
+    - -O2
