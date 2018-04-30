@@ -42,7 +42,8 @@
       alert.classList.add("hidden");
       textEdit.addEventListener('input', function(event){
         hasLocalChange = true;
-        socket.send(JSON.stringify({tag: "Draft", contents: textEdit.value}));
+        socket.send(new Blob(
+          [JSON.stringify({tag: "Draft", contents: textEdit.value})]));
         hasLocalChange = false;
       });
 
@@ -55,12 +56,6 @@
         editBlock.classList.remove("hidden");
         mainBlock.classList.add("hidden");
       });
-
-      function heartbeat(){
-        socket.send(JSON.stringify({tag: "Heartbeat"}));
-        setTimeout(heartbeat, 10000)
-      }
-      heartbeat();
     });
 
     socket.addEventListener('close', function (event) {
