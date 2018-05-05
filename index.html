@@ -42,8 +42,7 @@
       alert.classList.add("hidden");
       textEdit.addEventListener('input', function(event){
         hasLocalChange = true;
-        socket.send(new Blob(
-          [JSON.stringify({tag: "Draft", contents: textEdit.value})]));
+        socket.send(JSON.stringify({tag: "Draft", contents: textEdit.value}));
         hasLocalChange = false;
       });
 
