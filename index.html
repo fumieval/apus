@@ -51,7 +51,14 @@
   function connect_menu(){
     var socket = new WebSocket("ws://" + location.host + "/menu");
     socket.addEventListener('message', function (event) {
-      document.getElementById("sidebar").innerHTML = converter.makeHtml(event.data);
+      dat = JSON.parse(event.data);
+      switch(dat.tag) {
+        case "Content":
+          document.getElementById("sidebar").innerHTML = converter.makeHtml(dat.contents);
+          break;
+        case "HeartbeatAck":
+          break;
+      }
     });
     socket.addEventListener('open', function(event){
      heartbeat(socket);
