@@ -14,11 +14,17 @@ p > code.hljs { display: inline; }
     padding: 8px 0;
 }
 
+#sidebar ul {
+  padding: 6px 8px 6px 16px;
+}
+
 #sidebar li {
-    padding: 6px 8px 6px 16px;
     text-decoration: none;
-    color: #2196F3;
     display: block;
+}
+
+#sidebar a {
+  color: #2196F3;
 }
 
 #sidebar a:hover {
