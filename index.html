@@ -9,6 +9,8 @@
     <div id="connection-alert" class="alert">
       Connecting...
     </div>
+    <div id="sidebar" class="sidenav">
+    </div>
     <main id="mainBlock">
       <div>
         <button id="edit">Edit</button>
@@ -34,6 +36,14 @@
   var alert = document.getElementById("connection-alert");
   var hasLocalChange = false;
   var converter = new showdown.Converter({tables: true});
+
+  function connect_menu(){
+    const socket = new WebSocket("ws://" + location.host + "/menu");
+    socket.addEventListener('message', function (event) {
+      document.getElementById("sidebar").innerHTML = converter.makeHtml(event.data);
+    });
+  }
+  connect_menu();
 
   function connect(interval){
     const socket = new WebSocket("ws://" + location.host + location.pathname);
