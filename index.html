@@ -33,7 +33,7 @@
   var editButton = document.getElementById("edit");
   var alert = document.getElementById("connection-alert");
   var hasLocalChange = false;
-  var converter = new showdown.Converter()
+  var converter = new showdown.Converter({tables: true});
 
   function connect(interval){
     const socket = new WebSocket("ws://" + location.host + "/");
