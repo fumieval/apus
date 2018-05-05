@@ -70,7 +70,7 @@ updateArticle Env{..} authorId theirs = do
         _ -> theirs
       `catch` \(e :: SomeException) -> logError $ display e
 
-serverApp :: FilePath -> WS.ServerApp
+serverApp :: FilePath -> Env -> WS.ServerApp
 serverApp filePath pending = do
   logOptions' <- logOptionsHandle stderr True
   let logOptions = setLogUseTime True logOptions'
@@ -102,6 +102,7 @@ serverApp filePath pending = do
           Just Heartbeat -> return ()
 
       `finally` atomically (modifyTVar vClients $ IM.delete i)
+      `catch` \(e :: SomeException) -> runRIO Env{..} $ logError $ display e
 
 multiServer :: FilePath -> WS.ServerApp
 multiServer dir pending = serverApp (dir </> name) pending

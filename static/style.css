@@ -3,8 +3,7 @@
 }
 
 #container {
-  width: 50em;
-  margin-left: auto;
+  margin-left: 25%;
   margin-right: auto;
 }
 
@@ -87,24 +86,3 @@ button {
 
 tr:nth-child(even) {background-color: #f2f2f2;}
 
-.sidenav {
-    width: 10em;
-    position: fixed;
-    z-index: 1;
-    top: 20px;
-    left: 10px;
-    background: #ddd;
-    overflow-x: hidden;
-    padding: 1em;
-}
-
-.sidenav a {
-    text-decoration: none;
-    font-size: 1em;
-    color: #2196F3;
-    display: block;
-}
-
-.sidenav a:hover {
-    color: #064579;
-}
