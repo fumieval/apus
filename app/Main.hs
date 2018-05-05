@@ -42,6 +42,12 @@ data ApusReq = Submit
 instance FromJSON ApusReq
 instance ToJSON ApusReq
 
+data ApusResp = Content !Text
+  | HeartbeatAck
+  deriving Generic
+instance FromJSON ApusResp
+instance ToJSON ApusResp
+
 hunkToText :: Hunk T.Text -> [T.Text]
 hunkToText (LeftChange xs) = xs
 hunkToText (RightChange xs) = xs
@@ -66,7 +72,7 @@ updateArticle Env{..} authorId theirs = do
     liftIO (T.writeFile filePath (T.unlines theirs))
       `catch` \(e :: SomeException) -> logError $ display e
     forM_ (IM.toList m) $ \(i, conn) -> do
-      liftIO $ sendTextData conn $ T.unlines $ case IM.lookup i drafts of
+      liftIO $ sendTextData conn $ J.encode $ Content $ T.unlines $ case IM.lookup i drafts of
         Just ours | i /= authorId -> concatMap hunkToText $ diff3 theirs orig ours
         _ -> theirs
       `catch` \(e :: SomeException) -> logError $ display e
@@ -80,7 +86,7 @@ serverApp Env{..} pending = do
     modifyTVar vClients $ IM.insert i conn
     return $ do
       initialContent <- atomically $ readTVar vCurrent
-      sendTextData conn $ T.unlines initialContent
+      sendTextData conn $ J.encode $ Content $ T.unlines initialContent
       forever $ do
         J.decode <$> WS.receiveData conn >>= \case
           Nothing -> fail "Invalid Message"
@@ -89,7 +95,7 @@ serverApp Env{..} pending = do
             Just doc -> updateArticle Env{..} i doc
           Just (Draft txt) -> atomically $ modifyTVar vDraft
             $ IM.insert i $! T.lines txt
-          Just Heartbeat -> return ()
+          Just Heartbeat -> sendTextData conn $ J.encode HeartbeatAck
 
       `finally` atomically (modifyTVar vClients $ IM.delete i)
       `catch` \(e :: SomeException) -> runRIO Env{..} $ logError $ display e

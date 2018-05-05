@@ -98,12 +98,20 @@
 
     socket.addEventListener('message', function (event) {
       if (!hasLocalChange){
-        mainArticle.innerHTML = converter.makeHtml(event.data);
-        var codeElements = document.getElementsByTagName('code');
-        for (e of codeElements) {
-            hljs.highlightBlock(e);
+        dat = JSON.parse(event.data);
+        switch(dat.tag) {
+          case "Content":
+            mainArticle.innerHTML = converter.makeHtml(dat.contents);
+            var codeElements = document.getElementsByTagName('code');
+            for (e of codeElements) {
+                hljs.highlightBlock(e);
+            }
+            textEdit.value = event.data;
+            break;
+          case "HeartbeatAck":
+            break;
         }
-        textEdit.value = event.data;
+
       }
     });
   }
