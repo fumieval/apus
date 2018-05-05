@@ -80,13 +80,14 @@ updateArticle Env{..} authorId theirs = do
 serverApp :: Env -> WS.ServerApp
 serverApp Env{..} pending = do
   conn <- acceptRequest pending
+  forkPingThread conn 10
   join $ atomically $ do
     i <- readTVar vFreshClientId
     writeTVar vFreshClientId $! i + 1
     modifyTVar vClients $ IM.insert i conn
+    initialContent <- readTVar vCurrent
     return $ do
-      initialContent <- atomically $ readTVar vCurrent
-      sendTextData conn $ J.encode $ Content $ T.unlines initialContent
+      liftIO $ sendTextData conn $ J.encode $ Content $ T.unlines initialContent
       forever $ do
         J.decode <$> WS.receiveData conn >>= \case
           Nothing -> fail "Invalid Message"
