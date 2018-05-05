@@ -1,3 +1,5 @@
+p > code.hljs { display: inline; }
+
 .hidden {
   display: none;
 }
