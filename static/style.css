@@ -69,6 +69,10 @@ textarea {
   heght: 80%;
 }
 
+code {
+  font-family:Consolas,Monaco,Lucida Console,Liberation Mono,DejaVu Sans Mono,Bitstream Vera Sans Mono,Courier New, monospace;
+}
+
 button {
   background-color: #4CAF50; /* Green */
   border: none;

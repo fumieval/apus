@@ -2,7 +2,6 @@
 <head>
   <meta charset="utf-8">
   <link rel="stylesheet" href="/style.css">
-  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.8.6/showdown.min.js"></script>
   <link rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css">
@@ -49,7 +48,7 @@
   }
 
   function connect_menu(){
-    var socket = new WebSocket("ws://" + location.host + "/menu");
+    var socket = new WebSocket("ws://" + location.hostname + ":9960/menu");
     socket.addEventListener('message', function (event) {
       dat = JSON.parse(event.data);
       switch(dat.tag) {
@@ -67,7 +66,7 @@
   connect_menu();
 
   function connect(interval){
-    var socket = new WebSocket("ws://" + location.host + location.pathname);
+    var socket = new WebSocket("ws://" + location.hostname + ":9960" + location.pathname);
 
     socket.addEventListener('open', function (event) {
       alert.classList.add("hidden");
