@@ -3,7 +3,6 @@
 module Main where
 
 import RIO
-import Web.Scotty as S
 import qualified Data.ByteString.Char8 as B
 import Data.Aeson as J
 import Data.Extensible
@@ -14,7 +13,9 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Text.IO as T
 import GHC.Generics (Generic)
+import Network.HTTP.Types
 import Network.WebSockets as WS
+import Network.Wai
 import Network.Wai.Middleware.Static
 import Network.Wai.Handler.WebSockets
 import Network.Wai.Handler.Warp
@@ -139,11 +140,11 @@ main = withGetOpt "" opts $ \opt _ -> do
     let fileDir = maybe "data" id $ opt ^. #file
     setLocaleEncoding utf8
     vEnvs <- newTVarIO HM.empty
-    app <- scottyApp $ do
-      middleware $ unsafeStaticPolicy $ addBase "static"
-      get "/:page" $ file "index.html"
     runEnv (maybe 9960 id $ opt ^. #port >>= readMaybe)
-      $ websocketsOr defaultConnectionOptions (multiServer logger fileDir vEnvs) app
+      $ websocketsOr defaultConnectionOptions (multiServer logger fileDir vEnvs)
+      $ unsafeStaticPolicy (addBase "static")
+        $ \_ sendResp -> sendResp
+        $ responseFile status200 [] "index.html" Nothing
     where
       opts = #port @= optLastArg "p" ["port"] "port" "PORT"
         <: #file @= optLastArg "d" ["dir"] "Content directory" "PATH"
