@@ -37,6 +37,8 @@ dependencies:
 - warp
 - websockets
 - extensible
+- filepath
+- directory
 
 executables:
   apus-exe:

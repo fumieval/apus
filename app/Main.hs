@@ -4,11 +4,13 @@ module Main where
 
 import RIO
 import Web.Scotty as S
+import qualified Data.ByteString.Char8 as B
 import Data.Aeson as J
 import Data.Extensible
 import Data.Extensible.GetOpt
 import qualified Data.IntMap.Strict as IM
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 import qualified Data.Text.IO as T
 import GHC.Generics (Generic)
 import Network.WebSockets as WS
@@ -16,6 +18,8 @@ import Network.Wai.Middleware.Static
 import Network.Wai.Handler.WebSockets
 import Network.Wai.Handler.Warp
 import Data.Algorithm.Diff3
+import System.FilePath
+import System.Directory
 
 data Env = Env
   { vFreshClientId :: TVar Int
@@ -59,8 +63,17 @@ updateArticle Env{..} authorId theirs = do
         Just ours | i /= authorId -> concatMap hunkToText $ diff3 theirs orig ours
         _ -> theirs
 
-serverApp :: Env -> WS.ServerApp
-serverApp Env{..} pending = do
+serverApp :: FilePath -> WS.ServerApp
+serverApp filePath pending = do
+  vFreshClientId <- newTVarIO 0
+  vClients <- newTVarIO IM.empty
+  exist <- doesFileExist filePath
+  vCurrent <- if exist
+    then T.lines <$> T.readFile filePath >>= newTVarIO
+    else do
+      T.writeFile filePath ""
+      newTVarIO []
+  vDraft <- newTVarIO IM.empty
   conn <- acceptRequest pending
   join $ atomically $ do
     i <- readTVar vFreshClientId
@@ -81,19 +94,29 @@ serverApp Env{..} pending = do
 
       `finally` atomically (modifyTVar vClients $ IM.delete i)
 
+multiServer :: FilePath -> WS.ServerApp
+multiServer dir pending = serverApp (dir </> name) pending
+  where
+    name = T.unpack $ sanitise $ T.decodeUtf8 $ B.drop 1 $ requestPath
+      $ pendingRequest pending
+
+sanitise :: T.Text -> T.Text
+sanitise "" = "-"
+sanitise t = T.map f t where
+  f c
+    | elem c ("/\\?%*:|'\"<>. " :: String) = '-'
+    | otherwise = c
+
 main :: IO ()
 main = withGetOpt "" opts $ \opt _ -> do
-  let filePath = maybe "content.txt" id $ opt ^. #file
-  vFreshClientId <- newTVarIO 0
-  vClients <- newTVarIO IM.empty
-  vCurrent <- T.lines <$> T.readFile filePath >>= newTVarIO
-  vDraft <- newTVarIO IM.empty
+  let fileDir = maybe "data" id $ opt ^. #file
+
   app <- scottyApp $ do
     middleware $ unsafeStaticPolicy $ addBase "static"
-    get "/" $ file "index.html"
+    get "/:page" $ file "index.html"
   runEnv (maybe 9960 id $ opt ^. #port >>= readMaybe)
-    $ websocketsOr defaultConnectionOptions (serverApp Env{..}) app
+    $ websocketsOr defaultConnectionOptions (multiServer fileDir) app
   where
     opts = #port @= optLastArg "p" ["port"] "port" "PORT"
-      <: #file @= optLastArg "f" ["file"] "Content path" "PATH"
+      <: #file @= optLastArg "d" ["dir"] "Content directory" "PATH"
       <: nil

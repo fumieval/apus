@@ -36,7 +36,7 @@
   var converter = new showdown.Converter({tables: true});
 
   function connect(interval){
-    const socket = new WebSocket("ws://" + location.host + "/");
+    const socket = new WebSocket("ws://" + location.host + location.pathname);
 
     socket.addEventListener('open', function (event) {
       alert.classList.add("hidden");
