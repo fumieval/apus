@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, LambdaCase, OverloadedLabels #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, LambdaCase, OverloadedLabels, ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
 module Main where
 
@@ -18,6 +18,7 @@ import Network.Wai.Middleware.Static
 import Network.Wai.Handler.WebSockets
 import Network.Wai.Handler.Warp
 import Data.Algorithm.Diff3
+import GHC.IO.Encoding
 import System.FilePath
 import System.Directory
 
@@ -27,7 +28,11 @@ data Env = Env
   , vCurrent :: TVar [T.Text]
   , vDraft :: TVar (IM.IntMap [T.Text])
   , filePath :: FilePath
+  , logger :: LogFunc
   }
+
+instance HasLogFunc Env where
+  logFuncL f e = (\l -> e { logger = l}) <$> f (logger e)
 
 data ApusReq = Submit
   | Draft !Text
@@ -56,15 +61,19 @@ updateArticle Env{..} authorId theirs = do
   writeTVar vCurrent theirs
   m <- readTVar vClients
   drafts <- readTVar vDraft
-  return $ do
-    T.writeFile filePath (T.unlines theirs)
+  return $ runRIO Env{..} $ do
+    liftIO (T.writeFile filePath (T.unlines theirs))
+      `catch` \(e :: SomeException) -> logError $ display e
     forM_ (IM.toList m) $ \(i, conn) -> do
-      sendTextData conn $ T.unlines $ case IM.lookup i drafts of
+      liftIO $ sendTextData conn $ T.unlines $ case IM.lookup i drafts of
         Just ours | i /= authorId -> concatMap hunkToText $ diff3 theirs orig ours
         _ -> theirs
+      `catch` \(e :: SomeException) -> logError $ display e
 
 serverApp :: FilePath -> WS.ServerApp
 serverApp filePath pending = do
+  logOptions' <- logOptionsHandle stderr True
+  let logOptions = setLogUseTime True logOptions'
   vFreshClientId <- newTVarIO 0
   vClients <- newTVarIO IM.empty
   exist <- doesFileExist filePath
@@ -75,7 +84,7 @@ serverApp filePath pending = do
       newTVarIO []
   vDraft <- newTVarIO IM.empty
   conn <- acceptRequest pending
-  join $ atomically $ do
+  withLogFunc logOptions $ \logger -> join $ atomically $ do
     i <- readTVar vFreshClientId
     writeTVar vFreshClientId $! i + 1
     modifyTVar vClients $ IM.insert i conn
@@ -85,7 +94,7 @@ serverApp filePath pending = do
       forever $ do
         J.decode <$> WS.receiveData conn >>= \case
           Nothing -> fail "Invalid Message"
-          Just Submit -> join $ atomically $ IM.lookup i <$> readTVar vDraft >>= \case
+          Just Submit -> join $ liftIO $ atomically $ IM.lookup i <$> readTVar vDraft >>= \case
             Nothing -> return $ return ()
             Just doc -> updateArticle Env{..} i doc
           Just (Draft txt) -> atomically $ modifyTVar vDraft
@@ -110,6 +119,7 @@ sanitise t = T.map f t where
 main :: IO ()
 main = withGetOpt "" opts $ \opt _ -> do
   let fileDir = maybe "data" id $ opt ^. #file
+  setLocaleEncoding utf8
 
   app <- scottyApp $ do
     middleware $ unsafeStaticPolicy $ addBase "static"
