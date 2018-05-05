@@ -8,6 +8,7 @@ import qualified Data.ByteString.Char8 as B
 import Data.Aeson as J
 import Data.Extensible
 import Data.Extensible.GetOpt
+import qualified RIO.HashMap as HM
 import qualified Data.IntMap.Strict as IM
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
@@ -70,21 +71,10 @@ updateArticle Env{..} authorId theirs = do
         _ -> theirs
       `catch` \(e :: SomeException) -> logError $ display e
 
-serverApp :: FilePath -> Env -> WS.ServerApp
-serverApp filePath pending = do
-  logOptions' <- logOptionsHandle stderr True
-  let logOptions = setLogUseTime True logOptions'
-  vFreshClientId <- newTVarIO 0
-  vClients <- newTVarIO IM.empty
-  exist <- doesFileExist filePath
-  vCurrent <- if exist
-    then T.lines <$> T.readFile filePath >>= newTVarIO
-    else do
-      T.writeFile filePath ""
-      newTVarIO []
-  vDraft <- newTVarIO IM.empty
+serverApp :: Env -> WS.ServerApp
+serverApp Env{..} pending = do
   conn <- acceptRequest pending
-  withLogFunc logOptions $ \logger -> join $ atomically $ do
+  join $ atomically $ do
     i <- readTVar vFreshClientId
     writeTVar vFreshClientId $! i + 1
     modifyTVar vClients $ IM.insert i conn
@@ -104,10 +94,27 @@ serverApp filePath pending = do
       `finally` atomically (modifyTVar vClients $ IM.delete i)
       `catch` \(e :: SomeException) -> runRIO Env{..} $ logError $ display e
 
-multiServer :: FilePath -> WS.ServerApp
-multiServer dir pending = serverApp (dir </> name) pending
+multiServer :: LogFunc -> FilePath -> TVar (HM.HashMap T.Text Env) -> WS.ServerApp
+multiServer logger dir vEnvs pending = do
+  envs <- atomically $ readTVar vEnvs
+  env <- case HM.lookup name envs of
+    Just env -> return env
+    Nothing -> do
+      vFreshClientId <- newTVarIO 0
+      vClients <- newTVarIO IM.empty
+      let filePath = dir </> T.unpack name
+      exist <- doesFileExist filePath
+      vCurrent <- if exist
+        then T.lines <$> T.readFile filePath >>= newTVarIO
+        else do
+          T.writeFile filePath ""
+          newTVarIO []
+      vDraft <- newTVarIO IM.empty
+      atomically $ modifyTVar vEnvs $ HM.insert name Env{..}
+      return Env{..}
+  serverApp env pending
   where
-    name = T.unpack $ sanitise $ T.decodeUtf8 $ B.drop 1 $ requestPath
+    name = sanitise $ T.decodeUtf8 $ B.drop 1 $ requestPath
       $ pendingRequest pending
 
 sanitise :: T.Text -> T.Text
@@ -119,15 +126,18 @@ sanitise t = T.map f t where
 
 main :: IO ()
 main = withGetOpt "" opts $ \opt _ -> do
-  let fileDir = maybe "data" id $ opt ^. #file
-  setLocaleEncoding utf8
-
-  app <- scottyApp $ do
-    middleware $ unsafeStaticPolicy $ addBase "static"
-    get "/:page" $ file "index.html"
-  runEnv (maybe 9960 id $ opt ^. #port >>= readMaybe)
-    $ websocketsOr defaultConnectionOptions (multiServer fileDir) app
-  where
-    opts = #port @= optLastArg "p" ["port"] "port" "PORT"
-      <: #file @= optLastArg "d" ["dir"] "Content directory" "PATH"
-      <: nil
+  logOptions' <- logOptionsHandle stderr True
+  let logOptions = setLogUseTime True logOptions'
+  withLogFunc logOptions $ \logger -> do
+    let fileDir = maybe "data" id $ opt ^. #file
+    setLocaleEncoding utf8
+    vEnvs <- newTVarIO HM.empty
+    app <- scottyApp $ do
+      middleware $ unsafeStaticPolicy $ addBase "static"
+      get "/:page" $ file "index.html"
+    runEnv (maybe 9960 id $ opt ^. #port >>= readMaybe)
+      $ websocketsOr defaultConnectionOptions (multiServer logger fileDir vEnvs) app
+    where
+      opts = #port @= optLastArg "p" ["port"] "port" "PORT"
+        <: #file @= optLastArg "d" ["dir"] "Content directory" "PATH"
+        <: nil
