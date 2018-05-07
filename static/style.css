@@ -3,6 +3,11 @@ p > code.hljs { display: inline; }
 .hidden {
   display: none;
 }
+
+#login {
+  float: right;
+}
+
 #sidebar {
     width: 20%;
     position: fixed;
@@ -118,4 +123,3 @@ button {
 }
 
 tr:nth-child(even) {background-color: #f2f2f2;}
-
