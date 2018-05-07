@@ -45,7 +45,7 @@
   var alert = document.getElementById("connection-alert");
   var loginButton = document.getElementById('login-button');
   var hasLocalChange = false;
-  var converter = new showdown.Converter({tables: true});
+  var converter = new showdown.Converter({tables: true, emoji: true});
 
   function heartbeat(socket){
 	  socket.send(JSON.stringify({tag: "Token", contents: Cookies.get('GitHubToken')}));
