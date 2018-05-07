@@ -12,7 +12,7 @@
 </head>
 <body>
   <div id="login">
-    <a id="login-button">Login</a>
+    <a id="login-button"></a>
   </div>
   <div id="sidebar">
   </div>
@@ -22,7 +22,7 @@
     </div>
     <main id="mainBlock">
       <div>
-        <button id="edit">Edit</button>
+        <button id="edit" class="hidden">Edit</button>
       </div>
       <article id="articleContent">
       </article>
@@ -46,11 +46,6 @@
   var loginButton = document.getElementById('login-button');
   var hasLocalChange = false;
   var converter = new showdown.Converter({tables: true});
-
-  loginButton.addEventListener('click', function (event){
-    window.open("http://" + location.host + "/auth-start", "_blank"
-      , "width=640,height=480");
-  })
 
   function heartbeat(socket){
 	  socket.send(JSON.stringify({tag: "Token", contents: Cookies.get('GitHubToken')}));
@@ -95,6 +90,19 @@
         editBlock.classList.remove("hidden");
         mainBlock.classList.add("hidden");
       });
+
+    loginButton.innerText = "Login"
+    loginButton.addEventListener('click', function (event){
+      var win = window.open("http://" + location.host + "/auth-start", "_blank"
+        , "width=640,height=480");
+      var timer = setInterval(function() {
+        if(win.closed) {
+          clearInterval(timer);
+          socket.send(JSON.stringify({tag: "Token", contents: Cookies.get('GitHubToken')}));
+        }
+      }, 1000);
+    })
+
       heartbeat(socket);
     });
 
@@ -128,6 +136,7 @@
             break;
           case "AuthAck":
             loginButton.innerText = "Logged in as " + dat.contents;
+            editButton.classList.remove("hidden");
             break;
         }
 

@@ -5,7 +5,8 @@ p > code.hljs { display: inline; }
 }
 
 #login {
-  float: right;
+  text-align: right;
+  color: white;
 }
 
 #sidebar {
