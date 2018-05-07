@@ -66,7 +66,7 @@ instance HasLogFunc Env where
 data ApusReq = Submit
   | Draft !Text
   | Heartbeat
-  | Token !AccessToken
+  | Token !(Maybe AccessToken)
   deriving Generic
 instance FromJSON ApusReq
 instance ToJSON ApusReq
@@ -119,13 +119,14 @@ handleRequest Env{..} conn clientId = \case
   Draft txt -> atomically
     $ modifyTVar vDraft $ IM.insert clientId $! T.lines txt
   Heartbeat -> sendTextData conn $ J.encode HeartbeatAck
-  Token tok -> join $ atomically $ do
+  Token (Just tok) -> join $ atomically $ do
     users <- readTVar vUserInfo
     case HM.lookup tok users of
       Just name -> do
         modifyTVar vClientInfo $ IM.insert clientId name
         return $ sendTextData conn $ J.encode $ AuthAck name
       Nothing -> return $ pure ()
+  Token Nothing -> atomically $ modifyTVar vClientInfo $ IM.delete clientId
   where
     Global{..} = global
 
@@ -142,8 +143,9 @@ serverApp Env{..} pending = do
     return $ do
       liftIO $ sendTextData conn $ J.encode $ Content $ T.unlines initialContent
       forever $ do
-        J.decode <$> WS.receiveData conn >>= \case
-          Nothing -> fail "Invalid Message"
+        msg <- WS.receiveData conn
+        case decode msg of
+          Nothing -> runRIO Env{..} $ logError $ "Invalid message: " <> displayShow msg
           Just req -> handleRequest Env{..} conn i req
 
       `finally` atomically (modifyTVar vClients $ IM.delete i)
