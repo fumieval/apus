@@ -121,7 +121,9 @@ serverApp Env{..} pending = do
           Nothing -> WS.sendClose conn ("Invalid message" :: Text)
           Just req -> handleRequest Env{..} conn i req
 
-      `finally` atomically (modifyTVar vClients $ IM.delete i)
+      `finally` atomically (do
+        modifyTVar vClients $ IM.delete i
+        modifyTVar vClientInfo $ IM.delete i)
 
 multiServer :: Global -> WS.ServerApp
 multiServer global@Global{..} pending = do
