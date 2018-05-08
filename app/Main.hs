@@ -42,8 +42,7 @@ data Global = Global
 data Env = Env
   { vFreshClientId :: TVar Int
   , vClients :: TVar (IM.IntMap WS.Connection)
-  , vCurrent :: TVar [T.Text]
-  , vDraft :: TVar (IM.IntMap [T.Text])
+  , vCurrent :: TVar T.Text
   , vClientInfo :: TVar (IM.IntMap Text)
   , filePath :: FilePath
   , global :: Global
@@ -63,8 +62,7 @@ instance HasLogFunc Global where
 instance HasLogFunc Env where
   logFuncL = (\f e -> (\l -> e { global = l}) <$> f (global e)) . logFuncL
 
-data ApusReq = Submit
-  | Draft !Text
+data ApusReq = Submit !Text
   | Heartbeat
   | Token !(Maybe AccessToken)
   deriving Generic
@@ -78,21 +76,7 @@ data ApusResp = Content !Text
 instance FromJSON ApusResp
 instance ToJSON ApusResp
 
-hunkToText :: Hunk T.Text -> [T.Text]
-hunkToText (LeftChange xs) = xs
-hunkToText (RightChange xs) = xs
-hunkToText (Unchanged xs) = xs
-hunkToText (Conflict xs ys zs) = concat
-  [ pure $ T.replicate 8 "<" <> " Their change"
-  , xs
-  , pure $ T.replicate 8 "|"
-  , ys
-  , pure $ T.replicate 8 "="
-  , zs
-  , pure $ T.replicate 8 ">" <> " Your change"
-  ]
-
-updateArticle :: Env -> Int -> [T.Text] -> STM (IO ())
+updateArticle :: Env -> Int -> T.Text -> STM (IO ())
 updateArticle Env{..} authorId theirs = do
   clientInfo <- readTVar vClientInfo
   unless (IM.member authorId clientInfo)
@@ -100,24 +84,16 @@ updateArticle Env{..} authorId theirs = do
   orig <- readTVar vCurrent
   writeTVar vCurrent theirs
   m <- readTVar vClients
-  drafts <- readTVar vDraft
   return $ runRIO Env{..} $ do
-    liftIO (T.writeFile filePath (T.unlines theirs))
+    liftIO (T.writeFile filePath theirs)
       `catch` \(e :: SomeException) -> logError $ display e
     forM_ (IM.toList m) $ \(i, conn) -> do
-      liftIO $ sendTextData conn $ J.encode $ Content $ T.unlines $ case IM.lookup i drafts of
-        Just ours | i /= authorId -> concatMap hunkToText $ diff3 theirs orig ours
-        _ -> theirs
+      liftIO $ sendTextData conn $ J.encode $ Content theirs
       `catch` \(e :: SomeException) -> logError $ display e
 
 handleRequest :: Env -> WS.Connection -> Int -> ApusReq -> IO ()
 handleRequest Env{..} conn clientId = \case
-  Submit -> join $ liftIO $ atomically $ do
-    IM.lookup clientId <$> readTVar vDraft >>= \case
-      Nothing -> return $ return ()
-      Just doc -> updateArticle Env{..} clientId doc
-  Draft txt -> atomically
-    $ modifyTVar vDraft $ IM.insert clientId $! T.lines txt
+  Submit doc -> join $ atomically $ updateArticle Env{..} clientId doc
   Heartbeat -> sendTextData conn $ J.encode HeartbeatAck
   Token (Just tok) -> join $ atomically $ do
     users <- readTVar vUserInfo
@@ -166,7 +142,6 @@ multiServer global@Global{..} pending = do
         else do
           T.writeFile filePath ""
           newTVarIO []
-      vDraft <- newTVarIO IM.empty
       vClientInfo <- newTVarIO IM.empty
       atomically $ modifyTVar vEnvs $ HM.insert name Env{..}
       return Env{..}
