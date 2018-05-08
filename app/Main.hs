@@ -118,7 +118,7 @@ serverApp Env{..} pending = do
       forever $ do
         msg <- WS.receiveData conn
         case decode msg of
-          Nothing -> runRIO Env{..} $ logError $ "Invalid message: " <> displayShow msg
+          Nothing -> WS.sendClose conn ("Invalid message" :: Text)
           Just req -> handleRequest Env{..} conn i req
 
       `finally` atomically (modifyTVar vClients $ IM.delete i)
