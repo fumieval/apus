@@ -71,8 +71,6 @@
         case "Content":
           document.getElementById("sidebar").innerHTML = converter.makeHtml(dat.contents);
           break;
-        case "HeartbeatAck":
-          break;
       }
     });
     socket.addEventListener('open', function(event){
@@ -143,8 +141,6 @@
             } else {
                 textEdit.value = PS.Main.lineDiff3(dat.contents)(original)(textEdit.value);
             }
-            break;
-          case "HeartbeatAck":
             break;
           case "AuthAck":
             loginButton.innerText = "Logged in as " + dat.contents;

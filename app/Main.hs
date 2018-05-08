@@ -62,14 +62,12 @@ instance HasLogFunc Env where
   logFuncL = (\f e -> (\l -> e { global = l}) <$> f (global e)) . logFuncL
 
 data ApusReq = Submit !Text
-  | Heartbeat
   | Token !(Maybe AccessToken)
   deriving Generic
 instance FromJSON ApusReq
 instance ToJSON ApusReq
 
 data ApusResp = Content !Text
-  | HeartbeatAck
   | AuthAck !Text
   deriving Generic
 instance FromJSON ApusResp
@@ -92,7 +90,6 @@ updateArticle Env{..} authorId theirs = do
 handleRequest :: Env -> WS.Connection -> Int -> ApusReq -> IO ()
 handleRequest Env{..} conn clientId = \case
   Submit doc -> join $ atomically $ updateArticle Env{..} clientId doc
-  Heartbeat -> sendTextData conn $ J.encode HeartbeatAck
   Token (Just tok) -> join $ atomically $ do
     users <- readTVar vUserInfo
     case HM.lookup tok users of
