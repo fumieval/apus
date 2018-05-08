@@ -137,9 +137,7 @@ multiServer global@Global{..} pending = do
       exist <- doesFileExist filePath
       vCurrent <- if exist
         then T.readFile filePath >>= newTVarIO
-        else do
-          T.writeFile filePath ""
-          newTVarIO ""
+        else newTVarIO ""
       vClientInfo <- newTVarIO IM.empty
       atomically $ modifyTVar vEnvs $ HM.insert name Env{..}
       return Env{..}
