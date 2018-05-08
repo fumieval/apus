@@ -8,6 +8,7 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/haskell.min.js"></script>
+  <script src="/diff3.min.js"></script>
   <script>hljs.initHighlightingOnLoad();</script>
 </head>
 <body>
@@ -46,6 +47,7 @@
   var loginButton = document.getElementById('login-button');
   var hasLocalChange = false;
   var converter = new showdown.Converter({tables: true, emoji: true});
+  var original = null;
 
   function heartbeat(socket){
 	  socket.send(JSON.stringify({tag: "Token", contents: Cookies.get('GitHubToken')}));
@@ -75,20 +77,17 @@
 
     socket.addEventListener('open', function (event) {
       alert.classList.add("hidden");
-      textEdit.addEventListener('input', function(event){
-        hasLocalChange = true;
-        socket.send(JSON.stringify({tag: "Draft", contents: textEdit.value}));
-        hasLocalChange = false;
-      });
 
       submitButton.addEventListener('click', function(event){
-        socket.send(JSON.stringify({tag: "Submit"}));
+        socket.send(JSON.stringify({tag: "Submit", contents: textEdit.value}));
         editBlock.classList.add("hidden");
         mainBlock.classList.remove("hidden");
+        original = null;
       });
       editButton.addEventListener('click', function(event){
         editBlock.classList.remove("hidden");
         mainBlock.classList.add("hidden");
+        original = textEdit.value;
       });
 
     loginButton.innerText = "Login"
@@ -130,7 +129,11 @@
             for (e of codeElements) {
                 hljs.highlightBlock(e);
             }
-            textEdit.value = dat.contents;
+            if (original === null){
+                textEdit.value = dat.contents;
+            } else {
+                textEdit.value = PS.Main.lineDiff3(dat.contents)(original)(textEdit.value);
+            }
             break;
           case "HeartbeatAck":
             break;
