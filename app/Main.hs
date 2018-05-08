@@ -76,13 +76,15 @@ instance ToJSON ApusResp
 updateArticle :: Env -> Int -> T.Text -> STM (IO ())
 updateArticle Env{..} authorId theirs = do
   clientInfo <- readTVar vClientInfo
-  unless (IM.member authorId clientInfo)
-    $ fail "Unauthorised"
+  authorName <- case IM.lookup authorId clientInfo of
+    Just name -> return name
+    Nothing -> fail "Unauthorised"
   writeTVar vCurrent theirs
   m <- readTVar vClients
   return $ runRIO Env{..} $ do
     liftIO (T.writeFile filePath theirs)
       `catch` \(e :: SomeException) -> logError $ display e
+    logInfo $ displayShow filePath <> " is updated by " <> display authorName
     forM_ m $ \conn -> do
       liftIO $ sendTextData conn $ J.encode $ Content theirs
       `catch` \(e :: SomeException) -> logError $ display e
