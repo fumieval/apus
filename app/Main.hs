@@ -122,7 +122,6 @@ serverApp Env{..} pending = do
           Just req -> handleRequest Env{..} conn i req
 
       `finally` atomically (modifyTVar vClients $ IM.delete i)
-      `catch` \(e :: SomeException) -> runRIO Env{..} $ logError $ display e
 
 multiServer :: Global -> WS.ServerApp
 multiServer global@Global{..} pending = do
