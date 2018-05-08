@@ -49,8 +49,17 @@
   var converter = new showdown.Converter({tables: true, emoji: true});
   var original = null;
 
+  function getToken(){
+    var token = Cookies.get('GitHubToken');
+    if (token === undefined){
+      return null;
+    } else {
+      return token;
+    }
+  }
+
   function heartbeat(socket){
-	  socket.send(JSON.stringify({tag: "Token", contents: Cookies.get('GitHubToken')}));
+	  socket.send(JSON.stringify({tag: "Token", contents: getToken()}));
 	  setTimeout(heartbeat, 10000, socket);
   }
 
@@ -97,7 +106,7 @@
       var timer = setInterval(function() {
         if(win.closed) {
           clearInterval(timer);
-          socket.send(JSON.stringify({tag: "Token", contents: Cookies.get('GitHubToken')}));
+          socket.send(JSON.stringify({tag: "Token", contents: getToken()}));
         }
       }, 1000);
     })
