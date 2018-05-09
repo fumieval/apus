@@ -140,6 +140,7 @@ serverApp Env{..} pending = do
       `finally` atomically (do
         modifyTVar vClients $ IM.delete i
         modifyTVar vClientInfo $ IM.delete i)
+      `catch` \(_ :: ConnectionException) -> return ()
 
 multiServer :: Global -> WS.ServerApp
 multiServer global@Global{..} pending = do
