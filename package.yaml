@@ -24,7 +24,7 @@ dependencies:
 - base >= 4.7 && < 5
 - bytestring
 - containers
-- diff3
+- Diff
 - directory
 - extensible
 - filepath

@@ -6,6 +6,8 @@ import RIO
 
 import Control.Monad.Trans.Cont
 import Data.Aeson as J
+import Data.Algorithm.Diff
+import Data.List (zipWith)
 import GHC.Generics (Generic)
 import GHC.IO.Encoding
 import Network.HTTP.Client.TLS
@@ -73,18 +75,32 @@ data ApusResp = Content !Text
 instance FromJSON ApusResp
 instance ToJSON ApusResp
 
+renderDiff :: Int -> Diff Text -> [Text]
+renderDiff i d = map (T.pack (show i) <>) $ case d of
+  First a -> [" - " <> a]
+  Second a -> [" + " <> a]
+  _ -> []
+
 updateArticle :: Env -> Int -> T.Text -> STM (IO ())
 updateArticle Env{..} authorId theirs = do
   clientInfo <- readTVar vClientInfo
   authorName <- case IM.lookup authorId clientInfo of
     Just name -> return name
     Nothing -> fail "Unauthorised"
+  original <- readTVar vCurrent
   writeTVar vCurrent theirs
   m <- readTVar vClients
   return $ runRIO Env{..} $ do
     liftIO (T.writeFile filePath theirs)
       `catch` \(e :: SomeException) -> logError $ display e
-    logInfo $ displayShow filePath <> " is updated by " <> display authorName
+    let diff = concat $ zipWith renderDiff [1..]
+          $ getDiff (T.lines original) (T.lines theirs)
+    liftIO $ T.appendFile "apus-history" $ T.unlines
+      $ authorName
+      : T.pack filePath
+      : T.pack (show (length diff))
+      : diff
+    logInfo $ display authorName <> " updated " <> displayShow filePath
     forM_ m $ \conn -> do
       liftIO $ sendTextData conn $ J.encode $ Content theirs
       `catch` \(e :: SomeException) -> logError $ display e
