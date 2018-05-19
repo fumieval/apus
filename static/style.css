@@ -51,7 +51,7 @@ h2 {
   background: #eee;
   overflow-x: hidden;
   padding: 8px 0;
-  width: 16em;
+  width: 20em;
 }
 
 #sidebar ul {
@@ -73,6 +73,7 @@ h2 {
 
 #container {
   flex-grow: 1;
+  max-width: 70%;
 }
 
 body {
