@@ -11,6 +11,7 @@
   <script src="/diff3.min.js"></script>
   <script src="/apus.js"></script>
   <script>hljs.initHighlightingOnLoad();</script>
+  <title>extensible攻略Wiki</title>
 </head>
 <body>
   <div id="login">
@@ -70,7 +71,7 @@
   }
 
   function connect_menu(){
-    var socket = new WebSocket("ws://" + location.hostname + ":9960/menu");
+    var socket = new WebSocket("wss://" + location.host + "/menu");
     socket.addEventListener('message', function (event) {
       dat = JSON.parse(event.data);
       switch(dat.tag) {
@@ -86,7 +87,7 @@
   connect_menu();
 
   function connect(interval){
-    var socket = new WebSocket("ws://" + location.hostname + ":9960" + location.pathname);
+    var socket = new WebSocket("wss://" + location.host + location.pathname);
 
     socket.addEventListener('open', function (event) {
       alert.classList.add("hidden");
