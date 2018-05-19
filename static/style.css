@@ -5,6 +5,13 @@ code.hljs {
   padding: 2px;
 }
 
+h2 {
+  background-color: #d8edf6;
+  border-left-color: #abd;
+  border-left-width: 0.5em;
+  border-left-style: solid;
+  padding-left: 0.5em;
+}
 .hidden {
   display: none;
 }
