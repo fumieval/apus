@@ -7,7 +7,9 @@ import RIO
 import Control.Monad.Trans.Cont
 import Data.Aeson as J
 import Data.Algorithm.Diff
+import Data.Foldable (toList)
 import Data.List (zipWith)
+import qualified Data.Sequence as Seq
 import GHC.Generics (Generic)
 import GHC.IO.Encoding
 import Network.HTTP.Client.TLS
@@ -36,6 +38,7 @@ data Global = Global
   { config :: Config
   , vUserInfo :: TVar (HM.HashMap AccessToken Text)
   , vEnvs :: TVar (HM.HashMap Text Env)
+  , vRecentChanges :: TVar (Seq.Seq (Text, Text, Text))
   , logger :: LogFunc
   , hcManager :: HC.Manager
   }
@@ -53,6 +56,7 @@ data Config = Config
   { github :: GitHubInfo
   , dataDir :: FilePath
   , port :: Int
+  , recentChangesCount :: Int
   } deriving Generic
 
 instance FromJSON Config
@@ -71,6 +75,7 @@ instance ToJSON ApusReq
 
 data ApusResp = Content !Text
   | AuthAck !Text
+  | RecentChanges [(Text, Text, Text)]
   deriving Generic
 instance FromJSON ApusResp
 instance ToJSON ApusResp
@@ -81,15 +86,29 @@ renderDiff i d = map (T.pack (show i) <>) $ case d of
   Second a -> [" + " <> a]
   _ -> []
 
-updateArticle :: Env -> Int -> T.Text -> STM (IO ())
-updateArticle Env{..} authorId theirs = do
+broadcastChanges :: Global -> IO ()
+broadcastChanges Global{..} = do
+  changes <- atomically $ readTVar vRecentChanges
+  envs <- atomically $ readTVar vEnvs
+  forM_ envs $ \env -> do
+    clients <- atomically $ readTVar $ vClients env
+    forM_ clients
+      $ \conn -> sendTextData conn $ J.encode $ RecentChanges $ toList changes
+
+updateArticle :: Text -> Env -> Int -> Text -> STM (IO ())
+updateArticle name Env{..} authorId theirs = do
   clientInfo <- readTVar vClientInfo
   authorName <- case IM.lookup authorId clientInfo of
-    Just name -> return name
+    Just s -> return s
     Nothing -> fail "Unauthorised"
   original <- readTVar vCurrent
   writeTVar vCurrent theirs
   m <- readTVar vClients
+
+  modifyTVar (vRecentChanges global)
+    $ \s -> (Seq.|> (name, T.takeWhile (/='\n') theirs, authorName))
+    $ if length s >= recentChangesCount (config global) then Seq.drop 1 s else s
+
   return $ runRIO Env{..} $ do
     liftIO (T.writeFile filePath theirs)
       `catch` \(e :: SomeException) -> logError $ display e
@@ -105,22 +124,24 @@ updateArticle Env{..} authorId theirs = do
       liftIO $ sendTextData conn $ J.encode $ Content theirs
       `catch` \(e :: SomeException) -> logError $ display e
 
-handleRequest :: Env -> WS.Connection -> Int -> ApusReq -> IO ()
-handleRequest Env{..} conn clientId = \case
-  Submit doc -> join $ atomically $ updateArticle Env{..} clientId doc
+handleRequest :: Text -> Env -> WS.Connection -> Int -> ApusReq -> IO ()
+handleRequest name Env{..} conn clientId = \case
+  Submit doc -> do
+    join $ atomically $ updateArticle name Env{..} clientId doc
+    broadcastChanges global
   Token (Just tok) -> join $ atomically $ do
     users <- readTVar vUserInfo
     case HM.lookup tok users of
-      Just name -> do
-        modifyTVar vClientInfo $ IM.insert clientId name
+      Just s -> do
+        modifyTVar vClientInfo $ IM.insert clientId s
         return $ sendTextData conn $ J.encode $ AuthAck name
       Nothing -> return $ pure ()
   Token Nothing -> atomically $ modifyTVar vClientInfo $ IM.delete clientId
   where
     Global{..} = global
 
-serverApp :: Env -> WS.ServerApp
-serverApp Env{..} pending = do
+serverApp :: Text -> Env -> WS.ServerApp
+serverApp name Env{..} pending = do
   let Global{..} = global
   conn <- acceptRequest pending
   forkPingThread conn 10
@@ -135,7 +156,7 @@ serverApp Env{..} pending = do
         msg <- WS.receiveData conn
         case decode msg of
           Nothing -> WS.sendClose conn ("Invalid message" :: Text)
-          Just req -> handleRequest Env{..} conn i req
+          Just req -> handleRequest name Env{..} conn i req
 
       `finally` atomically (do
         modifyTVar vClients $ IM.delete i
@@ -158,7 +179,7 @@ multiServer global@Global{..} pending = do
       vClientInfo <- newTVarIO IM.empty
       atomically $ modifyTVar vEnvs $ HM.insert name Env{..}
       return Env{..}
-  serverApp env pending
+  serverApp name env pending
   where
     name = sanitise $ T.decodeUtf8 $ B.drop 1 $ requestPath
       $ pendingRequest pending
@@ -214,6 +235,7 @@ main = evalContT $ do
   liftIO $ setLocaleEncoding utf8
   vEnvs <- newTVarIO HM.empty
   vUserInfo <- newTVarIO HM.empty
+  vRecentChanges <- newTVarIO mempty
   liftIO $ runEnv port
     $ websocketsOr defaultConnectionOptions
       (multiServer Global{..})
@@ -226,7 +248,7 @@ main = evalContT $ do
           resp <- fmap concat $ forM xs $ \path -> do
             content <- T.readFile (dataDir </> path)
             let title = T.takeWhile (/='\n') content
-            let results = take 1 $ T.breakOnAll query content
+            let results = T.breakOnAll query content
             return [(path, title, T.takeEnd 30 pre, T.take 30 $ T.drop (T.length query) post) | (pre, post) <- results]
           sendResp $ responseLBS status200 [] $ J.encode resp
         _ -> sendResp $ responseFile status200 [] "index.html" Nothing

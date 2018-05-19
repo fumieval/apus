@@ -38,9 +38,12 @@
         </div>
       </div>
     </div>
-    <div id="search-pane">
-      <input id="search-box" type="text" placeholder="search">
-      <div id="search-result"></div>
+    <div>
+      <ul id="recent-changes"></ul>
+      <div id="search-pane">
+        <input id="search-box" type="text" placeholder="search">
+        <div id="search-result"></div>
+      </div>
     </div>
   </div>
 </body>
@@ -80,6 +83,17 @@
         case "Content":
           document.getElementById("sidebar").innerHTML = converter.makeHtml(dat.contents);
           break;
+        case "RecentChanges":
+          var recent = document.getElementById("recent-changes")
+          recent.innerHTML = [];
+          for (e of dat){
+            var item = document.createElement("li");
+            var link = document.createElement("a");
+            link.href = "/" + e[0];
+            link.innerText = e[1];
+            item.appendChild(link);
+            recent.appendChild(item);
+          }
       }
     });
     socket.addEventListener('open', function(event){

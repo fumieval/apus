@@ -41,6 +41,11 @@ h2 {
   margin: 1em;
 }
 
+#recent-changes {
+  background: #eee;
+  margin-bottom: 1em;
+}
+
 #search-pane {
   z-index: 1;
   background: #eee;
