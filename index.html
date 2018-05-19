@@ -166,6 +166,7 @@
   searchbox.addEventListener("change"
     , function(e){
       getJSON("/api/search/" + searchbox.value, function(data){
+        searchresult.innerHTML = "";
         for (v of data) {
           var item = document.createElement("div");
           item.classList.add("search-result-item");
