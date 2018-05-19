@@ -108,8 +108,8 @@ updateArticle name Env{..} authorId theirs = do
   m <- readTVar vClients
 
   modifyTVar (vRecentChanges global)
-    $ \s -> (Seq.|> (name, T.takeWhile (/='\n') theirs, authorName))
-    $ if length s >= recentChangesCount (config global) then Seq.drop 1 s else s
+    $ \s -> ((name, T.takeWhile (/='\n') theirs, authorName) Seq.<|)
+    $ if length s >= recentChangesCount (config global) then Seq.take (length s - 1) s else s
 
   return $ runRIO Env{..} $ do
     liftIO (T.writeFile filePath theirs)
