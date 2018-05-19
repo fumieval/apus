@@ -7,6 +7,8 @@ import RIO
 import Control.Monad.Trans.Cont
 import Data.Aeson as J
 import Data.Algorithm.Diff
+import Data.Drinkery
+import qualified Data.Drinkery.Finite as D
 import Data.List (zipWith)
 import qualified Data.Sequence as Seq
 import GHC.Generics (Generic)
@@ -56,6 +58,7 @@ data Config = Config
   , dataDir :: FilePath
   , port :: Int
   , recentChangesCount :: Int
+  , searchLimit :: Int
   } deriving Generic
 
 instance FromJSON Config
@@ -133,7 +136,7 @@ handleRequest name Env{..} conn clientId = \case
     case HM.lookup tok users of
       Just s -> do
         modifyTVar vClientInfo $ IM.insert clientId s
-        return $ sendTextData conn $ J.encode $ AuthAck name
+        return $ sendTextData conn $ J.encode $ AuthAck s
       Nothing -> return $ pure ()
   Token Nothing -> atomically $ modifyTVar vClientInfo $ IM.delete clientId
   where
@@ -244,12 +247,14 @@ main = evalContT $ do
       $ \req sendResp -> case pathInfo req of
         ["auth-start"] -> authStart Global{..} sendResp
         ["auth-finish"] -> authFinish Global{..} req sendResp
-        ["api", "search", query] -> do
-          xs <- listDirectory dataDir
-          resp <- fmap concat $ forM xs $ \path -> do
-            content <- T.readFile (dataDir </> path)
-            let title = T.takeWhile (/='\n') content
-            let results = T.breakOnAll query content
-            return [(path, title, T.takeEnd 30 pre, T.take 30 $ T.drop (T.length query) post) | (pre, post) <- results]
-          sendResp $ responseLBS status200 [] $ J.encode resp
+        ["api", "search", query] -> tapListT' (do
+          path <- liftIO (listDirectory dataDir) >>= sample
+          content <- liftIO $ T.readFile $ dataDir </> path
+          
+          let title = T.takeWhile (/='\n') content
+          let results = T.breakOnAll query content
+          sample [(path, title, T.takeEnd 30 pre, T.take 30 $ T.drop (T.length query) post) | (pre, post) <- results]
+          ) +& D.take searchLimit $& do
+            resp <- D.drinkUp
+            liftIO $ sendResp $ responseLBS status200 [] $ J.encode resp
         _ -> sendResp $ responseFile status200 [] "index.html" Nothing

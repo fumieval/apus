@@ -26,6 +26,7 @@ dependencies:
 - containers
 - Diff
 - directory
+- drinkery
 - extensible
 - filepath
 - hashable
