@@ -221,4 +221,12 @@ main = evalContT $ do
       $ \req sendResp -> case pathInfo req of
         ["auth-start"] -> authStart Global{..} sendResp
         ["auth-finish"] -> authFinish Global{..} req sendResp
+        ["api", "search", query] -> do
+          xs <- listDirectory dataDir
+          resp <- fmap concat $ forM xs $ \path -> do
+            content <- T.readFile (dataDir </> path)
+            let title = T.takeWhile (/='\n') content
+            let results = T.breakOnAll query content
+            return [(path, title, T.takeEnd 30 pre, T.take 30 $ T.drop (T.length query) post) | (pre, post) <- results]
+          sendResp $ responseLBS status200 [] $ J.encode resp
         _ -> sendResp $ responseFile status200 [] "index.html" Nothing

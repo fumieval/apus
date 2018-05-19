@@ -5,6 +5,14 @@ li > code.hljs { display: inline; }
   display: none;
 }
 
+.marker {
+  background-color: #ffff5b;
+}
+
+.search-result-item {
+  margin: 0.5em;
+}
+
 #login {
   text-align: right;
   color: white;
@@ -12,6 +20,22 @@ li > code.hljs { display: inline; }
 
 #sidebar {
     float: left;
+    width: 20%;
+    z-index: 1;
+    top: 20px;
+    left: 10px;
+    background: #eee;
+    overflow-x: hidden;
+    padding: 8px 0;
+}
+
+#search-box {
+    margin: 1em;
+    width: 80%;
+}
+
+#search-pane {
+    float: right;
     width: 20%;
     z-index: 1;
     top: 20px;
@@ -40,7 +64,7 @@ li > code.hljs { display: inline; }
 
 #container {
   margin-left: 25%;
-  margin-right: auto;
+  margin-right: 25%;
 }
 
 body {

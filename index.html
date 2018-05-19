@@ -9,6 +9,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/haskell.min.js"></script>
   <script src="/diff3.min.js"></script>
+  <script src="/apus.js"></script>
   <script>hljs.initHighlightingOnLoad();</script>
 </head>
 <body>
@@ -16,6 +17,10 @@
     <a id="login-button"></a>
   </div>
   <div id="sidebar">
+  </div>
+  <div id="search-pane">
+    <input id="search-box" type="text" placeholder="search">
+    <div id="search-result"></div>
   </div>
   <div id="container">
     <div id="connection-alert" class="alert hidden">
@@ -45,6 +50,7 @@
   var editButton = document.getElementById("edit");
   var alert = document.getElementById("connection-alert");
   var loginButton = document.getElementById('login-button');
+
   var hasLocalChange = false;
   var converter = new showdown.Converter({tables: true, emoji: true});
   var original = null;
@@ -151,6 +157,36 @@
       }
     });
   }
+
+  var searchbox = document.getElementById("search-box");
+  var searchresult = document.getElementById("search-result");
+  searchbox.addEventListener("change"
+    , function(e){
+      getJSON("/api/search/" + searchbox.value, function(data){
+        for (v of data) {
+          var item = document.createElement("div");
+          item.classList.add("search-result-item");
+          var title = document.createElement("h2");
+          var link = document.createElement("a");
+          link.href = "/" + v[0];
+          link.innerText = v[1];
+          title.appendChild(link);
+          item.appendChild(title);
+          var pre = document.createElement("span");
+          pre.innerText = v[2];
+          var body = document.createElement("span");
+          body.innerText = searchbox.value;
+          body.classList.add("marker");
+          var post = document.createElement("span");
+          post.innerText = v[3];
+          item.appendChild(pre);
+          item.appendChild(body);
+          item.appendChild(post);
+          searchresult.appendChild(item);
+        }
+      });
+    });
+
   connect(1);
 
 </script>
