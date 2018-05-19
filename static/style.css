@@ -30,30 +30,23 @@ h2 {
 }
 
 #sidebar {
-    float: left;
-    width: 20%;
-    z-index: 1;
-    top: 20px;
-    left: 10px;
-    background: #eee;
-    overflow-x: hidden;
-    padding: 8px 0;
+  z-index: 1;
+  background: #eee;
+  overflow-x: hidden;
+  padding: 8px 0;
+  width: 16em;
 }
 
 #search-box {
-    margin: 1em;
-    width: 80%;
+  margin: 1em;
 }
 
 #search-pane {
-    float: right;
-    width: 20%;
-    z-index: 1;
-    top: 20px;
-    left: 10px;
-    background: #eee;
-    overflow-x: hidden;
-    padding: 8px 0;
+  z-index: 1;
+  background: #eee;
+  overflow-x: hidden;
+  padding: 8px 0;
+  width: 16em;
 }
 
 #sidebar ul {
@@ -74,8 +67,7 @@ h2 {
 }
 
 #container {
-  margin-left: 20%;
-  margin-right: 20%;
+  flex-grow: 1;
 }
 
 body {

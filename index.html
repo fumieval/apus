@@ -17,28 +17,30 @@
   <div id="login">
     <a id="login-button"></a>
   </div>
-  <div id="sidebar">
-  </div>
-  <div id="search-pane">
-    <input id="search-box" type="text" placeholder="search">
-    <div id="search-result"></div>
-  </div>
-  <div id="container">
-    <div id="connection-alert" class="alert hidden">
+  <div style="display: flex; width=100%;">
+    <div id="sidebar">
     </div>
-    <main id="mainBlock">
-      <div>
-        <button id="edit" class="hidden">Edit</button>
+    <div id="container">
+      <div id="connection-alert" class="alert hidden">
       </div>
-      <article id="articleContent">
-        Loading...
-      </article>
-    </main>
-    <div id="editBlock" class="hidden">
-      <textarea id="textEdit" rows="20"></textarea>
-      <div>
-        <button id="submit">Submit</button>
+      <main id="mainBlock">
+        <div>
+          <button id="edit" class="hidden">Edit</button>
+        </div>
+        <article id="articleContent">
+          Loading...
+        </article>
+      </main>
+      <div id="editBlock" class="hidden">
+        <textarea id="textEdit" rows="20"></textarea>
+        <div>
+          <button id="submit">Submit</button>
+        </div>
       </div>
+    </div>
+    <div id="search-pane">
+      <input id="search-box" type="text" placeholder="search">
+      <div id="search-result"></div>
     </div>
   </div>
 </body>
