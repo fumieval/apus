@@ -180,8 +180,9 @@
 
   var searchbox = document.getElementById("search-box");
   var searchresult = document.getElementById("search-result");
-  searchbox.addEventListener("change"
+  searchbox.addEventListener("keydown"
     , function(e){
+      if (e.keyCode != 13) return;
       if (searchbox.value == "") return;
       getJSON("/api/search/" + encodeURI(searchbox.value), function(data){
         searchresult.innerHTML = "";
