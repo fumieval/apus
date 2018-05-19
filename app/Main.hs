@@ -226,7 +226,7 @@ main = evalContT $ do
           resp <- fmap concat $ forM xs $ \path -> do
             content <- T.readFile (dataDir </> path)
             let title = T.takeWhile (/='\n') content
-            let results = T.breakOnAll query content
+            let results = take 1 $ T.breakOnAll query content
             return [(path, title, T.takeEnd 30 pre, T.take 30 $ T.drop (T.length query) post) | (pre, post) <- results]
           sendResp $ responseLBS status200 [] $ J.encode resp
         _ -> sendResp $ responseFile status200 [] "index.html" Nothing
