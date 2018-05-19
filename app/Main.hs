@@ -7,7 +7,6 @@ import RIO
 import Control.Monad.Trans.Cont
 import Data.Aeson as J
 import Data.Algorithm.Diff
-import Data.Foldable (toList)
 import Data.List (zipWith)
 import qualified Data.Sequence as Seq
 import GHC.Generics (Generic)
@@ -75,7 +74,7 @@ instance ToJSON ApusReq
 
 data ApusResp = Content !Text
   | AuthAck !Text
-  | RecentChanges [(Text, Text, Text)]
+  | RecentChanges (Seq.Seq (Text, Text, Text))
   deriving Generic
 instance FromJSON ApusResp
 instance ToJSON ApusResp
@@ -93,7 +92,7 @@ broadcastChanges Global{..} = do
   forM_ envs $ \env -> do
     clients <- atomically $ readTVar $ vClients env
     forM_ clients
-      $ \conn -> sendTextData conn $ J.encode $ RecentChanges $ toList changes
+      $ \conn -> sendTextData conn $ J.encode $ RecentChanges changes
 
 updateArticle :: Text -> Env -> Int -> Text -> STM (IO ())
 updateArticle name Env{..} authorId theirs = do
@@ -152,6 +151,8 @@ serverApp name Env{..} pending = do
     initialContent <- readTVar vCurrent
     return $ do
       liftIO $ sendTextData conn $ J.encode $ Content initialContent
+      changes <- atomically $ readTVar vRecentChanges
+      liftIO $ sendTextData conn $ J.encode $ RecentChanges changes
       forever $ do
         msg <- WS.receiveData conn
         case decode msg of
