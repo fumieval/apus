@@ -34,16 +34,17 @@ h2 {
   background: #eee;
   overflow-x: hidden;
   padding: 8px 0;
-  width: 16em;
+  width: 20em;
 }
 
 #search-box {
   margin: 1em;
 }
 
-#recent-changes {
+#recent-changes-box {
   background: #eee;
   margin-bottom: 1em;
+  padding: 8px;
 }
 
 #search-pane {
