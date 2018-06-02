@@ -1,9 +1,8 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveGeneric, RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Auth.GitHub where
+import RIO
 import Data.Aeson
 import Data.Aeson.Types
-import Data.Hashable
-import Data.Monoid
 import GHC.Generics (Generic)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
@@ -12,8 +11,8 @@ import qualified Network.HTTP.Client as HC
 import Network.HTTP.Types.URI
 
 data GitHubInfo = GitHubInfo
-  { githubClientId :: B.ByteString
-  , githubClientSecret :: B.ByteString
+  { githubClientId :: ByteString
+  , githubClientSecret :: ByteString
   } deriving Generic
 instance FromJSON GitHubInfo where
   parseJSON = withObject "Object" $ \obj -> do
@@ -21,15 +20,15 @@ instance FromJSON GitHubInfo where
     githubClientSecret <- fmap T.encodeUtf8 $ obj .: "clientSecret"
     return GitHubInfo{..}
 
-newtype AccessToken = AccessToken B.ByteString deriving (Show, Eq, Hashable)
+newtype AccessToken = AccessToken ByteString deriving (Show, Eq, Hashable)
 
 instance FromJSON AccessToken where
-  parseJSON v = AccessToken . T.encodeUtf8 <$> parseJSON v
+  parseJSON v = AccessToken . encodeUtf8 <$> parseJSON v
 
 instance ToJSON AccessToken where
-  toJSON (AccessToken t) = toJSON $ T.decodeUtf8 t
+  toJSON (AccessToken t) = either (const Null) toJSON $ decodeUtf8' t
 
-oauthURL :: GitHubInfo -> B.ByteString -> B.ByteString
+oauthURL :: GitHubInfo -> ByteString -> ByteString
 oauthURL GitHubInfo{..} state = mconcat
   [ "https://github.com/login/oauth/authorize"
   , renderSimpleQuery True

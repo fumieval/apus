@@ -1,0 +1,8 @@
+github:
+  clientId: ""
+  clientSecret: ""
+port: 9960
+dataDir: "data"
+recentChangesCount: 10
+tlsCertificate: localhost.crt
+tlsKey: localhost.key

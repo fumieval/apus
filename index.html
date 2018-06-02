@@ -125,7 +125,7 @@
 
     loginButton.innerText = "Login"
     loginButton.addEventListener('click', function (event){
-      var win = window.open("http://" + location.host + "/auth-start", "_blank"
+      var win = window.open("https://" + location.host + "/auth-start", "_blank"
         , "width=640,height=480");
       var timer = setInterval(function() {
         if(win.closed) {
@@ -157,15 +157,16 @@
         dat = JSON.parse(event.data);
         switch(dat.tag) {
           case "Content":
-            mainArticle.innerHTML = converter.makeHtml(dat.contents);
+            var text = dat.contents[1];
+            mainArticle.innerHTML = converter.makeHtml(text);
             var codeElements = document.getElementsByTagName('code');
             for (e of codeElements) {
                 hljs.highlightBlock(e);
             }
             if (original === null){
-                textEdit.value = dat.contents;
+                textEdit.value = text;
             } else {
-                textEdit.value = PS.Main.lineDiff3(dat.contents)(original)(textEdit.value);
+                textEdit.value = PS.Main.lineDiff3(text)(original)(textEdit.value);
             }
             break;
           case "AuthAck":
