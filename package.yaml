@@ -45,6 +45,11 @@ dependencies:
 - websockets
 - yaml
 
+default-extensions:
+- OverloadedStrings
+- DeriveGeneric
+- RecordWildCards
+
 executables:
   apus-exe:
     main:                Main.hs
