@@ -34,7 +34,7 @@ h2 {
   background: #eee;
   overflow-x: hidden;
   padding: 8px 0;
-  width: 20em;
+  min-width: 16em;
 }
 
 #search-box {
