@@ -21,6 +21,7 @@ description:         Please see the README on Github at <https://github.com/gith
 
 dependencies:
 - aeson
+- binary
 - base >= 4.7 && < 5
 - bytestring
 - containers
@@ -42,8 +43,16 @@ dependencies:
 - wai-middleware-static
 - wai-websockets
 - warp
+- warp-tls
 - websockets
 - yaml
+
+default-extensions:
+- OverloadedStrings
+- DeriveGeneric
+- RecordWildCards
+- NoImplicitPrelude
+- LambdaCase
 
 executables:
   apus-exe:

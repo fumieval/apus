@@ -25,11 +25,18 @@
       </div>
       <main id="mainBlock">
         <div>
-          <button id="edit" class="hidden">Edit</button>
+          <button id="edit" class="hidden button-edit">Edit</button>
         </div>
         <article id="articleContent">
           Loading...
         </article>
+        <table id="historyTable">
+          <thead>
+            <tr><th>Author</th><th>Date</th></tr>
+          </thead>
+          <tbody id="history">
+          </tbody>
+        </table>
       </main>
       <div id="editBlock" class="hidden">
         <textarea id="textEdit" rows="20"></textarea>
@@ -59,6 +66,7 @@
   var editButton = document.getElementById("edit");
   var alert = document.getElementById("connection-alert");
   var loginButton = document.getElementById('login-button');
+  var historyTable = document.getElementById("history");
 
   var hasLocalChange = false;
   var converter = new showdown.Converter({tables: true, emoji: true});
@@ -84,7 +92,7 @@
       dat = JSON.parse(event.data);
       switch(dat.tag) {
         case "Content":
-          document.getElementById("sidebar").innerHTML = converter.makeHtml(dat.contents);
+          document.getElementById("sidebar").innerHTML = converter.makeHtml(dat.contents[1]);
           break;
         case "RecentChanges":
           var recent = document.getElementById("recent-changes")
@@ -125,7 +133,7 @@
 
     loginButton.innerText = "Login"
     loginButton.addEventListener('click', function (event){
-      var win = window.open("http://" + location.host + "/auth-start", "_blank"
+      var win = window.open("https://" + location.host + "/auth-start", "_blank"
         , "width=640,height=480");
       var timer = setInterval(function() {
         if(win.closed) {
@@ -157,15 +165,30 @@
         dat = JSON.parse(event.data);
         switch(dat.tag) {
           case "Content":
-            mainArticle.innerHTML = converter.makeHtml(dat.contents);
+            var text = dat.contents[1];
+            mainArticle.innerHTML = converter.makeHtml(text);
             var codeElements = document.getElementsByTagName('code');
             for (e of codeElements) {
                 hljs.highlightBlock(e);
             }
             if (original === null){
-                textEdit.value = dat.contents;
+                textEdit.value = text;
             } else {
-                textEdit.value = PS.Main.lineDiff3(dat.contents)(original)(textEdit.value);
+                textEdit.value = PS.Main.lineDiff3(text)(original)(textEdit.value);
+            }
+            historyTable.innerHTML = "";
+            for (e of dat.contents[0]) {
+              var item = document.createElement("tr");
+              var authorCell = document.createElement("td");
+              var dateCell = document.createElement("td");
+              var dateLink = document.createElement("a");
+              authorCell.innerText = e.revAuthor;
+              dateLink.innerText = e.revTime;
+              dateLink.href = "/api/articles/" + e.revId
+              dateCell.appendChild(dateLink);
+              item.appendChild(authorCell);
+              item.appendChild(dateCell);
+              historyTable.appendChild(item);
             }
             break;
           case "AuthAck":

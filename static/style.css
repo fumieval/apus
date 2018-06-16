@@ -91,6 +91,11 @@ body {
   margin: 1em;
 }
 
+#historyTable {
+  background: white;
+  margin: 1em;
+}
+
 article {
   background: white;
   min-height: 40em;
@@ -121,7 +126,6 @@ code {
 }
 
 button {
-  background-color: #4CAF50; /* Green */
   border: none;
   color: white;
   padding: 15px 32px;
@@ -129,7 +133,14 @@ button {
   text-decoration: none;
   display: inline-block;
   font-size: 16px;
-  width: 100%;
+}
+
+.button-edit {
+  background-color: #4CAF50;
+}
+
+.button-history {
+  background-color: #ABAB44;
 }
 
 .alert {
