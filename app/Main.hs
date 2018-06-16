@@ -149,17 +149,12 @@ mainApp global@Global{..} = unsafeStaticPolicy (addBase "static")
           return $ sendResp $ responseLBS status200 [] $ J.encode revs
       , return $ sendResp $ responseLBS status404 [] "Not found"
       ]
-    ["api", "revisions", page, readMaybe . T.unpack -> Just num] -> join $ atomically $ asum
+    ["api", "articles", readMaybe . T.unpack -> Just i] -> join $ atomically $ asum
       [ do
-          revMap <- readTVar vRevisions
-          revs <- maybe retry pure $ HM.lookup page revMap
-          r <- case drop num revs of
-            r : _ -> pure r
-            _ -> retry
-          getPage <- fetch storage (revId r)
+          getPage <- fetch storage i
           return $ do
             content <- getPage
-            sendResp $ responseLBS status200 [] $ J.encode (r, T.decodeUtf8 content)
+            sendResp $ responseLBS status200 [] $ J.encode (T.decodeUtf8 content)
       , return $ sendResp $ responseLBS status404 [] "Not found"
       ]
     ["api", "search", query] -> tapListT' (do
