@@ -6,7 +6,7 @@ apus is a wiki system which features instant updates. Namely, your changes are b
 
 Copy `config.yaml.sample` as `config.yaml`.
 
-Create an OAuth app on [GitHub] (https://github.com/settings/developers) and obtain a client id and secret, then set `clientId` and `clientSecret` fields in `config.yaml`.
+Create an OAuth app on [GitHub](https://github.com/settings/developers) and obtain a client id and secret, then set `clientId` and `clientSecret` fields in `config.yaml`.
 
 Prepare a SSL certificate and a key, and replace the values of `tlsCertificate` and `tlsKey` with the paths.
 
