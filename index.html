@@ -108,7 +108,8 @@
             var item = document.createElement("li");
             var link = document.createElement("a");
             link.href = "/" + e[0];
-            link.innerText = e[1] + "(" + e[2] + ")";
+            link.innerText = e[1]
+            link.title = e[2];
             item.appendChild(link);
             recent.appendChild(item);
           }
