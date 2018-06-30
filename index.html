@@ -46,6 +46,7 @@
         <textarea id="textEdit" rows="20"></textarea>
         <div>
           <button id="submit">Submit</button>
+          <button id="preview">Preview</button>
         </div>
       </div>
     </div>
@@ -68,6 +69,7 @@
   var textEdit = document.getElementById("textEdit");
   var submitButton = document.getElementById("submit");
   var editButton = document.getElementById("edit");
+  var previewButton = document.getElementById("preview");
   var alert = document.getElementById("connection-alert");
   var loginButton = document.getElementById('login-button');
   var historyTable = document.getElementById("history");
@@ -129,6 +131,10 @@
         editBlock.classList.add("hidden");
         mainBlock.classList.remove("hidden");
         original = null;
+      });
+      previewButton.addEventListener('click', function(event){
+        mainArticle.innerHTML = converter.makeHtml(textEdit.value);
+        mainBlock.classList.remove("hidden");
       });
       editButton.addEventListener('click', function(event){
         editBlock.classList.remove("hidden");
