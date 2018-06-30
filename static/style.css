@@ -178,3 +178,15 @@ button {
 }
 
 tr:nth-child(even) {background-color: #f2f2f2;}
+
+.d2h-ins {
+  background-color: c3ffc3;
+}
+
+.d2h-del {
+  background-color: ffc3c3;
+}
+
+.d2h-diff-table {
+  border-spacing: 0px;
+}
