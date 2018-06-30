@@ -104,6 +104,14 @@ article {
   border-bottom-right-radius: 1em;
 }
 
+#diffBlock {
+  background: white;
+  padding: 2em;
+  margin-top: 1em;
+  border-bottom-left-radius: 1em;
+  border-bottom-right-radius: 1em;
+}
+
 textarea {
   text-rendering: auto;
   color: initial;

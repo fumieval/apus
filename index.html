@@ -8,6 +8,8 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/haskell.min.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/3.4.0/diff.min.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/diff2html/2.3.3/diff2html.min.js"></script>
   <script src="/diff3.min.js"></script>
   <script src="/apus.js"></script>
   <script>hljs.initHighlightingOnLoad();</script>
@@ -30,6 +32,8 @@
         <article id="articleContent">
           Loading...
         </article>
+        <div id="diffBlock" class="hidden">
+        </div>
         <table id="historyTable">
           <thead>
             <tr><th>Author</th><th>Date</th></tr>
@@ -67,6 +71,7 @@
   var alert = document.getElementById("connection-alert");
   var loginButton = document.getElementById('login-button');
   var historyTable = document.getElementById("history");
+  var diffBlock = document.getElementById("diffBlock");
 
   var hasLocalChange = false;
   var converter = new showdown.Converter({tables: true, emoji: true});
@@ -97,7 +102,7 @@
         case "RecentChanges":
           var recent = document.getElementById("recent-changes")
           recent.innerHTML = [];
-          for (e of dat.contents){
+          for (var e of dat.contents){
             var item = document.createElement("li");
             var link = document.createElement("a");
             link.href = "/" + e[0];
@@ -160,6 +165,8 @@
       countdown(interval)
     });
 
+    var dragText = null;
+    var dragTime = null;
     socket.addEventListener('message', function (event) {
       if (!hasLocalChange){
         dat = JSON.parse(event.data);
@@ -168,7 +175,7 @@
             var text = dat.contents[1];
             mainArticle.innerHTML = converter.makeHtml(text);
             var codeElements = document.getElementsByTagName('code');
-            for (e of codeElements) {
+            for (var e of codeElements) {
                 hljs.highlightBlock(e);
             }
             if (original === null){
@@ -177,18 +184,38 @@
                 textEdit.value = PS.Main.lineDiff3(text)(original)(textEdit.value);
             }
             historyTable.innerHTML = "";
-            for (e of dat.contents[0]) {
-              var item = document.createElement("tr");
-              var authorCell = document.createElement("td");
-              var dateCell = document.createElement("td");
-              var dateLink = document.createElement("a");
-              authorCell.innerText = e.revAuthor;
-              dateLink.innerText = e.revTime;
-              dateLink.href = "/api/articles/" + e.revId
-              dateCell.appendChild(dateLink);
-              item.appendChild(authorCell);
-              item.appendChild(dateCell);
-              historyTable.appendChild(item);
+            for (e0 of dat.contents[0]) {
+              (function(e){
+                var item = document.createElement("tr");
+                var authorCell = document.createElement("td");
+                var dateCell = document.createElement("td");
+                var dateLink = document.createElement("a");
+                authorCell.innerText = e.revAuthor;
+                dateLink.innerText = e.revTime;
+                dateLink.addEventListener('dragover', handleDragOver, false);
+                dateLink.addEventListener("dragstart",
+                  function(event){
+                    getJSON("/api/articles/" + e.revId, function(new_){
+                      dragText = new_;
+                      dragTime = e.revTime;
+                    });
+                  });
+                dateLink.draggable = true;
+                dateLink.addEventListener("drop",
+                  function(event){
+                    getJSON("/api/articles/" + e.revId, function(old){
+                      var patch = JsDiff.createPatch("article", old, dragText, e.revTime, dragTime);
+                      diffBlock.innerHTML
+                        = Diff2Html.getPrettyHtml(patch
+                          , {inputFormat: 'diff', showFiles: true, matching: 'lines'});
+                      diffBlock.classList.remove("hidden");
+                    });
+                  });
+                dateCell.appendChild(dateLink);
+                item.appendChild(authorCell);
+                item.appendChild(dateCell);
+                historyTable.appendChild(item);
+              })(e0);
             }
             break;
           case "AuthAck":
@@ -196,40 +223,13 @@
             editButton.classList.remove("hidden");
             break;
         }
-
       }
     });
   }
-
   var searchbox = document.getElementById("search-box");
-  var searchresult = document.getElementById("search-result");
   searchbox.addEventListener("change"
     , function(e){
-      if (searchbox.value == "") return;
-      getJSON("/api/search/" + encodeURI(searchbox.value), function(data){
-        searchresult.innerHTML = "";
-        for (v of data) {
-          var item = document.createElement("div");
-          item.classList.add("search-result-item");
-          var title = document.createElement("h2");
-          var link = document.createElement("a");
-          link.href = "/" + v[0];
-          link.innerText = v[1];
-          title.appendChild(link);
-          item.appendChild(title);
-          var pre = document.createElement("span");
-          pre.innerText = v[2];
-          var body = document.createElement("span");
-          body.innerText = searchbox.value;
-          body.classList.add("marker");
-          var post = document.createElement("span");
-          post.innerText = v[3];
-          item.appendChild(pre);
-          item.appendChild(body);
-          item.appendChild(post);
-          searchresult.appendChild(item);
-        }
-      });
+      apus.printSearch(searchbox.value, document.getElementById("search-result"));
     });
 
   connect(1);
