@@ -192,8 +192,14 @@ main = evalContT $ do
   vUserInfo <- newTVarIO HM.empty
   vRecentChanges <- newTVarIO mempty
   vRevisions <- liftIO $ do
-    revs <- J.eitherDecode' <$> BL.readFile (dataDir </> "revisions")
-    newTVarIO $ either (const HM.empty) id revs
+    exist <- doesFileExist (dataDir </> "revisions")
+    if exist
+      then do
+        revs <- J.eitherDecode' <$> BL.readFile (dataDir </> "revisions")
+        newTVarIO $ either (const HM.empty) id revs
+      else do
+        B.writeFile (dataDir </> "revisions") "{}"
+        newTVarIO HM.empty
   storage <- ContT $ withSequence dataDir
   liftIO $ runEnv 9960
     -- (tlsSettings tlsCertificate tlsKey)
