@@ -2,7 +2,7 @@
 module Main where
 
 import RIO
-import Control.Monad.STM (retry)
+import Control.Monad.STM (retry, throwSTM)
 import Control.Monad.Trans.Cont
 import Data.Aeson as J
 import Data.Drinkery
@@ -17,7 +17,7 @@ import Network.Wai as Wai
 import Network.Wai.Handler.Warp
 import Network.Wai.Handler.WarpTLS
 import Network.Wai.Handler.WebSockets
-import Network.Wai.Middleware.Static
+import Network.Wai.Middleware.Static hiding ((<|>))
 import Network.WebSockets as WS
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy as BL
@@ -58,12 +58,17 @@ broadcastChanges Global{..} = do
     forM_ clients
       $ \conn -> sendTextData conn $ J.encode $ RecentChanges changes
 
+data ApusException = Unchanged deriving (Show, Eq)
+instance Exception ApusException
+
 updateArticle :: Text -> Env -> Int -> Text -> STM (IO ())
 updateArticle name Env{..} authorId theirs = do
   clientInfo <- readTVar vClientInfo
   authorName <- case IM.lookup authorId clientInfo of
     Just s -> return s
     Nothing -> fail "Unauthorised"
+  current <- readTVar vCurrent
+  when (current == theirs) retry
   writeTVar vCurrent theirs
   m <- readTVar vClients
 
@@ -86,9 +91,9 @@ updateArticle name Env{..} authorId theirs = do
 
 handleRequest :: Text -> Env -> WS.Connection -> Int -> ApusReq -> IO ()
 handleRequest name Env{..} conn clientId = \case
-  Submit doc -> do
-    join $ atomically $ updateArticle name Env{..} clientId doc
-    broadcastChanges global
+  Submit doc -> join $ do
+    atomically $ (>>broadcastChanges global) <$> updateArticle name Env{..} clientId doc
+    <|> pure (pure ())    
   Token (Just tok) -> join $ atomically $ do
     users <- readTVar vUserInfo
     case HM.lookup tok users of
@@ -190,8 +195,8 @@ main = evalContT $ do
     revs <- J.eitherDecode' <$> BL.readFile (dataDir </> "revisions")
     newTVarIO $ either (const HM.empty) id revs
   storage <- ContT $ withSequence dataDir
-  liftIO $ runTLS
-    (tlsSettings tlsCertificate tlsKey)
-    (setPort port defaultSettings)
+  liftIO $ runEnv 9960
+    -- (tlsSettings tlsCertificate tlsKey)
+    -- (setPort port defaultSettings)
     $ websocketsOr defaultConnectionOptions
       (multiServer Global{..}) $ mainApp Global{..}
