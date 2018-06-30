@@ -1,12 +1,20 @@
 p > code.hljs { display: inline; }
 li > code.hljs { display: inline; }
 
+a {
+  color: eef;
+}
+
+a:visited {
+  color: e7f;
+}
+
 code.hljs {
   padding: 2px;
 }
 
 h2 {
-  background-color: #d8edf6;
+  background-color: #446;
   border-left-color: #abd;
   border-left-width: 0.5em;
   border-left-style: solid;
@@ -31,7 +39,7 @@ h2 {
 
 #sidebar {
   z-index: 1;
-  background: #eee;
+  background: #333;
   overflow-x: hidden;
   padding: 8px 0;
   min-width: 16em;
@@ -42,7 +50,7 @@ h2 {
 }
 
 #recent-changes-box {
-  background: #eee;
+  background: #333;
   margin-bottom: 1em;
   padding: 8px;
 }
@@ -78,13 +86,14 @@ h2 {
 }
 
 body {
-  background:
-  radial-gradient(circle, transparent 20%, slategray 20%, slategray 80%, transparent 80%, transparent),
-  radial-gradient(circle, transparent 20%, slategray 20%, slategray 80%, transparent 80%, transparent) 50px 50px,
-  linear-gradient(#A8B1BB 8px, transparent 8px) 0 -4px,
-  linear-gradient(90deg, #A8B1BB 8px, transparent 8px) -4px 0;
-  background-color: slategray;
-  background-size:100px 100px, 100px 100px, 50px 50px, 50px 50px;
+color: white;
+background:
+radial-gradient(black 15%, transparent 16%) 0 0,
+radial-gradient(black 15%, transparent 16%) 8px 8px,
+radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 0 1px,
+radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 8px 9px;
+background-color:#282828;
+background-size:16px 16px;  
 }
 
 #mainBlock {
@@ -92,12 +101,12 @@ body {
 }
 
 #historyTable {
-  background: white;
+  background: #333;
   margin: 1em;
 }
 
 article {
-  background: white;
+  background: #333;
   min-height: 40em;
   padding: 2em;
   border-bottom-left-radius: 1em;
@@ -105,7 +114,7 @@ article {
 }
 
 #diffBlock {
-  background: white;
+  background: black;
   padding: 2em;
   margin-top: 1em;
   border-bottom-left-radius: 1em;
@@ -177,7 +186,7 @@ button {
   color: black;
 }
 
-tr:nth-child(even) {background-color: #f2f2f2;}
+tr:nth-child(even) {background-color: #3f3f3f;}
 
 .d2h-ins {
   background-color: c3ffc3;
