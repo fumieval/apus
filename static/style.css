@@ -39,7 +39,7 @@ h2 {
 
 #sidebar {
   z-index: 1;
-  background: #333;
+  background: #333 15%;
   overflow-x: hidden;
   padding: 8px 0;
   min-width: 16em;
@@ -50,7 +50,7 @@ h2 {
 }
 
 #recent-changes-box {
-  background: #333;
+  background: #333 15%;
   margin-bottom: 1em;
   padding: 8px;
 }
@@ -106,7 +106,7 @@ background-size:16px 16px;
 }
 
 article {
-  background: #333;
+  background: rgba(51,51,51,0.8);
   min-height: 40em;
   padding: 2em;
   border-bottom-left-radius: 1em;
@@ -114,7 +114,7 @@ article {
 }
 
 #diffBlock {
-  background: black;
+  background: #333 15%;
   padding: 2em;
   margin-top: 1em;
   border-bottom-left-radius: 1em;
@@ -189,11 +189,11 @@ button {
 tr:nth-child(even) {background-color: #3f3f3f;}
 
 .d2h-ins {
-  background-color: c3ffc3;
+  background-color: #353;
 }
 
 .d2h-del {
-  background-color: ffc3c3;
+  background-color: #533;
 }
 
 .d2h-diff-table {
