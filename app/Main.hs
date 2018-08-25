@@ -2,13 +2,14 @@
 module Main where
 
 import RIO
-import Control.Monad.STM (retry, throwSTM)
+import Control.Lens (lastOf, folded)
 import Control.Monad.Trans.Cont
 import Data.Aeson as J
-import Data.Drinkery
-import qualified Data.Drinkery.Finite as D
 import Data.Time.Clock
+import Data.Winery
 import qualified Data.Sequence as Seq
+import qualified Database.Liszt as L
+import qualified Database.Liszt.Internal as L
 import GHC.Generics (Generic)
 import GHC.IO.Encoding
 import Network.HTTP.Client.TLS
@@ -20,20 +21,15 @@ import Network.Wai.Handler.WebSockets
 import Network.Wai.Middleware.Static hiding ((<|>))
 import Network.WebSockets as WS
 import qualified Data.ByteString.Char8 as B
-import qualified Data.ByteString.Lazy as BL
 import qualified Data.IntMap.Strict as IM
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
-import qualified Data.Text.IO as T
 import qualified Data.Yaml as Yaml
 import qualified RIO.HashMap as HM
-import System.Directory
 import System.Environment
-import System.FilePath
 
 import Auth.GitHub
 import Auth
-import Sequence
 import Types
 
 data ApusReq = Submit !Text
@@ -67,9 +63,6 @@ updateArticle name Env{..} authorId theirs = do
   authorName <- case IM.lookup authorId clientInfo of
     Just s -> return s
     Nothing -> fail "Unauthorised"
-  current <- readTVar vCurrent
-  when (current == theirs) retry
-  writeTVar vCurrent theirs
   m <- readTVar vClients
 
   modifyTVar (vRecentChanges global)
@@ -77,23 +70,25 @@ updateArticle name Env{..} authorId theirs = do
     $ if length s >= recentChangesCount (config global) then Seq.take (length s - 1) s else s
 
   return $ runRIO Env{..} $ do
-    newId <- liftIO $ write (storage global) $ T.encodeUtf8 theirs
     now <- liftIO getCurrentTime
-    revs <- atomically $ do
-      modifyTVar (vRevisions global)
-        $ HM.insertWith (++) name [Revision newId authorName now]
-      readTVar (vRevisions global)
-    liftIO $ BL.writeFile (dataDir (config global) </> "revisions") $ J.encode revs
+    liftIO $ L.commit (storage global) $ L.insertTagged
+      ("A" <> encodeUtf8 name)
+      (toEncodingWithSchema Revision
+        { revTime = now
+        , revAuthor = authorName
+        })
+      theirs
     logInfo $ display authorName <> " updated " <> display name
     forM_ m $ \conn -> do
-      liftIO $ sendTextData conn $ J.encode $ Content (maybe [] id $ HM.lookup name revs) theirs
+      revs <- liftIO $ getRevisions global name
+      liftIO $ sendTextData conn $ J.encode $ Content (map fst revs) theirs
       `catch` \(e :: SomeException) -> logError $ display e
 
 handleRequest :: Text -> Env -> WS.Connection -> Int -> ApusReq -> IO ()
 handleRequest name Env{..} conn clientId = \case
   Submit doc -> join $ do
     atomically $ (>>broadcastChanges global) <$> updateArticle name Env{..} clientId doc
-    <|> pure (pure ())    
+    <|> pure (pure ())
   Token (Just tok) -> join $ atomically $ do
     users <- readTVar vUserInfo
     case HM.lookup tok users of
@@ -114,11 +109,12 @@ serverApp name Env{..} pending = do
     i <- readTVar vFreshClientId
     writeTVar vFreshClientId $! i + 1
     modifyTVar vClients $ IM.insert i conn
-    initialContent <- readTVar vCurrent
-    revMap <- readTVar vRevisions
-    let revs = maybe [] id $ HM.lookup name revMap
     return $ do
-      liftIO $ sendTextData conn $ J.encode $ Content revs initialContent
+      revs <- getRevisions global name
+      initialContent <- case lastOf folded revs of
+        Nothing -> pure ""
+        Just (_, rp) -> T.decodeUtf8 <$> L.fetchPayload storage rp
+      liftIO $ sendTextData conn $ J.encode $ Content (map fst revs) initialContent
       changes <- atomically $ readTVar vRecentChanges
       liftIO $ sendTextData conn $ J.encode $ RecentChanges changes
       forever $ do
@@ -142,38 +138,40 @@ multiServer global@Global{..} pending = do
   where
     name = T.decodeUtf8 $ B.drop 1 $ requestPath $ pendingRequest pending
 
+getRevisions :: Global -> Text -> IO [(Revision, L.RawPointer)]
+getRevisions Global{..} name = do
+  root <- L.fetchRoot storage
+  L.lookupSpine storage ("A" <> encodeUtf8 name) root >>= \case
+    Just spine -> do
+      result <- L.takeSpine storage 256 spine []
+      traverse (\(tag, rp) -> case deserialise tag of
+        Left e -> fail $ show e
+        Right rev -> pure (rev, rp)) result
+    Nothing -> return []
+
 mainApp :: Global -> Application
 mainApp global@Global{..} = unsafeStaticPolicy (addBase "static")
   $ \req sendResp -> case pathInfo req of
     ["auth-start"] -> authStart global sendResp
     ["auth-finish"] -> authFinish global req sendResp
-    ["api", "revisions", page] -> join $ atomically $ asum
-      [ do
-          revMap <- readTVar vRevisions
-          revs <- maybe retry pure $ HM.lookup page revMap
-          return $ sendResp $ responseLBS status200 [] $ J.encode revs
-      , return $ sendResp $ responseLBS status404 [] "Not found"
-      ]
-    ["api", "articles", readMaybe . T.unpack -> Just i] -> join $ atomically $ asum
-      [ do
-          getPage <- fetch storage i
-          return $ do
-            content <- getPage
-            sendResp $ responseLBS status200 [] $ J.encode (T.decodeUtf8 content)
-      , return $ sendResp $ responseLBS status404 [] "Not found"
-      ]
-    ["api", "search", query] -> tapListT' (do
-      path <- liftIO (listDirectory dataDir) >>= sample
-      content <- liftIO $ T.readFile $ dataDir </> path
-
-      let title = T.takeWhile (/='\n') content
-      let results = T.breakOnAll query content
-      sample [(path, title, T.takeEnd 30 pre, T.take 30 $ T.drop (T.length query) post) | (pre, post) <- results]
-      ) +& D.take searchLimit $& do
-        resp <- D.drinkUp
-        liftIO $ sendResp $ responseLBS status200 [] $ J.encode resp
-    _ -> sendResp $ responseFile status200 [] "index.html" Nothing
+    ["api", "revisions", page] -> do
+      revs <- getRevisions global page
+      sendResp $ responseLBS status200 [] $ J.encode $ map fst revs
+    ["api", "articles", page, readMaybe . T.unpack -> Just i] -> do
+      root <- L.fetchRoot storage
+      L.lookupSpine storage ("A" <> encodeUtf8 page) root >>= \case
+        Nothing -> sendResp notFound
+        Just spine -> do
+          spine' <- L.dropSpine storage (L.spineLength spine - i) spine
+          result <- L.takeSpine storage 1 spine' []
+          case result of
+            (_, rp) : _ -> do
+              bs <- L.fetchPayload storage rp
+              sendResp $ responseLBS status200 [] $ J.encode $ T.decodeUtf8 bs
+            _ -> sendResp $ responseLBS status404 [] "Not found"
+    _ -> sendResp notFound
   where
+    notFound = responseFile status200 [] "index.html" Nothing
     Config{..} = config
 
 main :: IO ()
@@ -191,18 +189,9 @@ main = evalContT $ do
   vEnvs <- newTVarIO HM.empty
   vUserInfo <- newTVarIO HM.empty
   vRecentChanges <- newTVarIO mempty
-  vRevisions <- liftIO $ do
-    exist <- doesFileExist (dataDir </> "revisions")
-    if exist
-      then do
-        revs <- J.eitherDecode' <$> BL.readFile (dataDir </> "revisions")
-        newTVarIO $ either (const HM.empty) id revs
-      else do
-        B.writeFile (dataDir </> "revisions") "{}"
-        newTVarIO HM.empty
-  storage <- ContT $ withSequence dataDir
-  liftIO $ runEnv 9960
-    -- (tlsSettings tlsCertificate tlsKey)
-    -- (setPort port defaultSettings)
+  storage <- ContT $ L.withLiszt dataPath
+  liftIO $ runTLS
+    (tlsSettings tlsCertificate tlsKey)
+    (setPort port defaultSettings)
     $ websocketsOr defaultConnectionOptions
       (multiServer Global{..}) $ mainApp Global{..}
