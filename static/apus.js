@@ -54,3 +54,72 @@ function handleDragOver(e) {
 
   return false;
 }
+
+function insertAtCaret(txtarea,text) {
+		var scrollPos = txtarea.scrollTop;
+		var strPos = 0;
+		var br = ((txtarea.selectionStart || txtarea.selectionStart == '0') ?
+			"ff" : (document.selection ? "ie" : false ) );
+		if (br == "ie") {
+			txtarea.focus();
+			var range = document.selection.createRange();
+			range.moveStart ('character', -txtarea.value.length);
+			strPos = range.text.length;
+		}
+		else if (br == "ff") strPos = txtarea.selectionStart;
+
+		var front = (txtarea.value).substring(0,strPos);
+		var back = (txtarea.value).substring(strPos,txtarea.value.length);
+		txtarea.value=front+text+back;
+		strPos = strPos + text.length;
+		if (br == "ie") {
+			txtarea.focus();
+			var range = document.selection.createRange();
+			range.moveStart ('character', -txtarea.value.length);
+			range.moveStart ('character', strPos);
+			range.moveEnd ('character', 0);
+			range.select();
+		}
+		else if (br == "ff") {
+			txtarea.selectionStart = strPos;
+			txtarea.selectionEnd = strPos;
+			txtarea.focus();
+		}
+		txtarea.scrollTop = scrollPos;
+}
+
+function uploadFile(token, file, cont) {
+  var reader = new FileReader();
+  var xhr = new XMLHttpRequest();
+  xhr.open("POST", "/api/file", true);
+  xhr.setRequestHeader("Content-Type", file.type);
+  xhr.setRequestHeader("Authorization", token);
+  xhr.onreadystatechange = function(){
+    if (xhr.readyState === XMLHttpRequest.DONE) {
+      if (xhr.status === 200) {
+        cont();
+      } else {
+        console.log(xhr);
+      }
+    }
+  }
+  reader.onload = function(event) {;
+    xhr.send(event.target.result);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function loadThumbnails(thumbnails, offset){
+  getJSON("/api/thumbnails/" + offset, function(data){
+    for (e0 of data) {
+      (function(e){
+        var img = document.createElement("img");
+        img.src = e.src;
+        img.addEventListener("click", function(_e){
+          insertAtCaret(textEdit, " ![](/api/file/" + e.id + ")");
+        });
+        thumbnails.appendChild(img);
+      })(e0);
+    }
+  });
+}

@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLabels, ScopedTypeVariables, ViewPatterns #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Main where
 
 import RIO
@@ -9,7 +10,6 @@ import Data.Time.Clock
 import Data.Winery
 import qualified Data.Sequence as Seq
 import qualified Database.Liszt as L
-import qualified Database.Liszt.Internal as L
 import GHC.Generics (Generic)
 import GHC.IO.Encoding
 import Network.HTTP.Client.TLS
@@ -23,11 +23,13 @@ import Network.WebSockets as WS
 import qualified Data.ByteString.Char8 as B
 import qualified Data.IntMap.Strict as IM
 import qualified Data.Text as T
+import qualified Data.Text.Read as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Yaml as Yaml
 import qualified RIO.HashMap as HM
 import System.Environment
 
+import qualified Api
 import Auth.GitHub
 import Auth
 import Types
@@ -71,16 +73,17 @@ updateArticle name Env{..} authorId theirs = do
 
   return $ runRIO Env{..} $ do
     now <- liftIO getCurrentTime
-    liftIO $ L.commit (storage global) $ L.insertTagged
-      ("A" <> encodeUtf8 name)
+    count <- L.count (storage global) (pageNameToKey name)
+    liftIO $ L.commit (storage global) $ L.insertTagged (pageNameToKey name)
       (toEncodingWithSchema Revision
-        { revTime = now
+        { revId = count
+        , revTime = now
         , revAuthor = authorName
         })
       theirs
     logInfo $ display authorName <> " updated " <> display name
     forM_ m $ \conn -> do
-      revs <- liftIO $ getRevisions global name
+      revs <- liftIO $ fetchRevisions global name
       liftIO $ sendTextData conn $ J.encode $ Content (map fst revs) theirs
       `catch` \(e :: SomeException) -> logError $ display e
 
@@ -110,7 +113,7 @@ serverApp name Env{..} pending = do
     writeTVar vFreshClientId $! i + 1
     modifyTVar vClients $ IM.insert i conn
     return $ do
-      revs <- getRevisions global name
+      revs <- fetchRevisions global name
       initialContent <- case lastOf folded revs of
         Nothing -> pure ""
         Just (_, rp) -> T.decodeUtf8 <$> L.fetchPayload storage rp
@@ -138,41 +141,22 @@ multiServer global@Global{..} pending = do
   where
     name = T.decodeUtf8 $ B.drop 1 $ requestPath $ pendingRequest pending
 
-getRevisions :: Global -> Text -> IO [(Revision, L.RawPointer)]
-getRevisions Global{..} name = do
-  root <- L.fetchRoot storage
-  L.lookupSpine storage ("A" <> encodeUtf8 name) root >>= \case
-    Just spine -> do
-      result <- L.takeSpine storage 256 spine []
-      traverse (\(tag, rp) -> case deserialise tag of
-        Left e -> fail $ show e
-        Right rev -> pure (rev, rp)) result
-    Nothing -> return []
-
 mainApp :: Global -> Application
 mainApp global@Global{..} = unsafeStaticPolicy (addBase "static")
   $ \req sendResp -> case pathInfo req of
     ["auth-start"] -> authStart global sendResp
     ["auth-finish"] -> authFinish global req sendResp
-    ["api", "revisions", page] -> do
-      revs <- getRevisions global page
-      sendResp $ responseLBS status200 [] $ J.encode $ map fst revs
-    ["api", "articles", page, readMaybe . T.unpack -> Just i] -> do
-      root <- L.fetchRoot storage
-      L.lookupSpine storage ("A" <> encodeUtf8 page) root >>= \case
-        Nothing -> sendResp notFound
-        Just spine -> do
-          spine' <- L.dropSpine storage (L.spineLength spine - i) spine
-          result <- L.takeSpine storage 1 spine' []
-          case result of
-            (_, rp) : _ -> do
-              bs <- L.fetchPayload storage rp
-              sendResp $ responseLBS status200 [] $ J.encode $ T.decodeUtf8 bs
-            _ -> sendResp $ responseLBS status404 [] "Not found"
-    _ -> sendResp notFound
+    "api" : xs -> sendResp =<< case xs of
+      ["revisions", page] -> Api.getRevisions global page
+      ["revisions", page, T.decimal -> Right (rev, _)] -> Api.getRevision global page rev
+      ["file"] -> Api.postFile global req
+      ["file", T.decimal -> Right (offset, _)] -> Api.getFile global offset
+      ["thumbnails", T.decimal -> Right (offset, _)] -> Api.getThumbnails global offset
+      _ -> return $ responseLBS status404 [] "Not found"
+    _ -> sendResp $ responseFile status200 [] "index.html" Nothing
   where
-    notFound = responseFile status200 [] "index.html" Nothing
     Config{..} = config
+
 
 main :: IO ()
 main = evalContT $ do

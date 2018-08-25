@@ -21,7 +21,7 @@ h2 {
   padding-left: 0.5em;
 }
 .hidden {
-  display: none;
+  display: none !important;
 }
 
 .marker {
@@ -93,7 +93,7 @@ radial-gradient(black 15%, transparent 16%) 8px 8px,
 radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 0 1px,
 radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 8px 9px;
 background-color:#282828;
-background-size:16px 16px;  
+background-size:16px 16px;
 }
 
 #mainBlock {
@@ -113,6 +113,9 @@ article {
   border-bottom-right-radius: 1em;
 }
 
+article img {
+  max-width: 90%;
+}
 #diffBlock {
   background: #333 15%;
   padding: 2em;
@@ -140,24 +143,6 @@ textarea {
 
 code {
   font-family:Consolas,Monaco,Lucida Console,Liberation Mono,DejaVu Sans Mono,Bitstream Vera Sans Mono,Courier New, monospace;
-}
-
-button {
-  border: none;
-  color: white;
-  padding: 15px 32px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  font-size: 16px;
-}
-
-.button-edit {
-  background-color: #4CAF50;
-}
-
-.button-history {
-  background-color: #ABAB44;
 }
 
 .alert {
@@ -202,4 +187,14 @@ tr:nth-child(even) {background-color: #3f3f3f;}
 
 #preview {
   background-color: #AF4C50;
+}
+
+#thumbnails {
+  display: flex;
+  flex-wrap: wrap;
+  flex-basis: 25%;
+}
+
+#upload-preview {
+  max-width: 80%;
 }

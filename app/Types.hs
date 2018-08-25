@@ -5,7 +5,7 @@ import RIO
 import Data.Aeson as J
 import Data.Algorithm.Diff
 import qualified Data.Sequence as Seq
-import Database.Liszt (LisztHandle)
+import Database.Liszt (LisztHandle, fetchRange, Key, RawPointer)
 import GHC.Generics (Generic)
 import Network.WebSockets as WS
 import qualified Data.IntMap.Strict as IM
@@ -50,12 +50,21 @@ data Env = Env
   }
 
 data Revision = Revision
-  { revTime :: !UTCTime
+  { revId :: !Int
+  , revTime :: !UTCTime
   , revAuthor :: !Text
   } deriving (Show, Generic)
 instance Serialise Revision
 instance FromJSON Revision
 instance ToJSON Revision
+
+data ImageInfo = ImageInfo
+  { imgTime :: !UTCTime
+  , imgAuthor :: Text
+  , imgType :: !ByteString
+  , imgContent :: !ByteString
+  } deriving Generic
+instance Serialise ImageInfo
 
 instance HasLogFunc Env where
   logFuncL = (\f e -> (\l -> e { global = l}) <$> f (global e)) . logFuncL
@@ -73,3 +82,13 @@ createEnv global@Global{..} name = do
   vClientInfo <- newTVarIO IM.empty
   atomically $ modifyTVar vEnvs $ HM.insert name Env{..}
   return Env{..}
+
+fetchRevisions :: Global -> Text -> IO [(Revision, RawPointer)]
+fetchRevisions Global{..} name = do
+  result <- fetchRange storage (pageNameToKey name) (-256) (-1)
+  traverse (\(_, tag, rp) -> case deserialise tag of
+    Left e -> fail $ show e
+    Right rev -> pure (rev, rp)) result
+
+pageNameToKey :: Text -> Key
+pageNameToKey name = "A" <> encodeUtf8 name

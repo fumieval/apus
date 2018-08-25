@@ -2,6 +2,8 @@
 <head>
   <meta charset="utf-8">
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/buttons.css">
+  <link href="//netdna.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.8.6/showdown.min.js"></script>
   <link rel="stylesheet"
@@ -27,13 +29,11 @@
       </div>
       <main id="mainBlock">
         <div>
-          <button id="edit" class="hidden button-edit">Edit</button>
+          <button id="edit" class="hidden button button-royal button-giant">Edit</button>
         </div>
         <article id="articleContent">
           Loading...
         </article>
-        <div id="diffBlock" class="hidden">
-        </div>
         <table id="historyTable">
           <thead>
             <tr><th>Author</th><th>Date</th></tr>
@@ -42,11 +42,24 @@
           </tbody>
         </table>
       </main>
+      <div id="diffBlock">
+      </div>
       <div id="editBlock" class="hidden">
         <textarea id="textEdit" rows="20"></textarea>
         <div>
-          <button id="submit" class="button-edit">Submit</button>
-          <button id="preview">Preview</button>
+          <button id="submit" class="button button-action button-giant">Submit</button>
+          <button id="preview" class="button button-caution button-giant">Preview</button>
+        </div>
+        <div id="files">
+          <div>
+            <div id="thumbnails"></div>
+            <label for="file" class="button button-royal">
+              Select a file
+            </label>
+            <input type="file" id="file" style="display: none;">
+            <button id="upload" class="hidden button-highlight">Upload</button>
+          </div>
+          <img id="upload-preview">
         </div>
       </div>
     </div>
@@ -74,6 +87,7 @@
   var loginButton = document.getElementById('login-button');
   var historyTable = document.getElementById("history");
   var diffBlock = document.getElementById("diffBlock");
+  var thumbnails = document.getElementById("thumbnails");
 
   var hasLocalChange = false;
   var converter = new showdown.Converter({tables: true, emoji: true});
@@ -197,12 +211,13 @@
                 var authorCell = document.createElement("td");
                 var dateCell = document.createElement("td");
                 var dateLink = document.createElement("a");
+                var title = location.pathname.slice(1);
                 authorCell.innerText = e.revAuthor;
                 dateLink.innerText = e.revTime;
                 dateLink.addEventListener('dragover', handleDragOver, false);
                 dateLink.addEventListener("dragstart",
                   function(event){
-                    getJSON("/api/articles/" + e.revId, function(new_){
+                    getJSON("/api/revisions/" + title + "/" + e.revId, function(new_){
                       dragText = new_;
                       dragTime = e.revTime;
                     });
@@ -210,7 +225,7 @@
                 dateLink.draggable = true;
                 dateLink.addEventListener("drop",
                   function(event){
-                    getJSON("/api/articles/" + e.revId, function(old){
+                    getJSON("/api/revisions/" + title + "/" + e.revId, function(old){
                       var patch = JsDiff.createPatch("article", old, dragText, e.revTime, dragTime);
                       diffBlock.innerHTML
                         = Diff2Html.getPrettyHtml(patch
@@ -233,12 +248,43 @@
       }
     });
   }
+
   var searchbox = document.getElementById("search-box");
   searchbox.addEventListener("change"
     , function(e){
       apus.printSearch(searchbox.value, document.getElementById("search-result"));
     });
 
+  var fileInput = document.getElementById("file");
+  var preview = document.getElementById("upload-preview");
+  var uploadButton = document.getElementById("upload");
+
+  fileInput.addEventListener("change"
+    , function(e){
+        var reader = new FileReader();
+        reader.onloadend = function () {
+          preview.src = reader.result;
+          uploadButton.classList.remove("hidden");
+          uploadButton.classList.add("button");
+        }
+        if (file) {
+          reader.readAsDataURL(fileInput.files[0]);
+        } else {
+          preview.src = "";
+        }
+    });
+
+  uploadButton.addEventListener("click"
+    , function(e){
+      uploadFile(getToken(), fileInput.files[0]
+        , function(){
+          preview.src = "";
+          thumbnails.innerHTML = "";
+          loadThumbnails(thumbnails, 0, 15);
+        });
+      });
+
+  loadThumbnails(thumbnails, 0, 15);
   connect(1);
 
 </script>

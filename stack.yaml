@@ -45,9 +45,9 @@ extra-deps:
 - git: git@github.com:haskell-fswatch/hfsnotify
   commit: 3dbdf6d902664e8407415314d8304263e6ad112f
 - git: git@github.com:fumieval/winery
-  commit: 00c223fde3043167a0913c57ee3951d3b74d622b
+  commit: ad88a34
 - git: git@github.com:fumieval/liszt
-  commit: fb526b2f39c472256179ec443f6707347beff52a
+  commit: f89edb9
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

@@ -24,6 +24,7 @@ dependencies:
 - binary
 - base >= 4.7 && < 5
 - bytestring
+- base64-bytestring
 - containers
 - Diff
 - directory
@@ -34,6 +35,8 @@ dependencies:
 - http-client
 - http-client-tls
 - http-types
+- JuicyPixels
+- JuicyPixels-extra
 - lens
 - liszt
 - rio
