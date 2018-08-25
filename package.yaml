@@ -34,17 +34,21 @@ dependencies:
 - http-client
 - http-client-tls
 - http-types
+- lens
+- liszt
 - rio
 - stm
 - text
 - time
 - transformers
+- unordered-containers
 - wai
 - wai-middleware-static
 - wai-websockets
 - warp
 - warp-tls
 - websockets
+- winery
 - yaml
 
 default-extensions:
