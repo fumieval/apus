@@ -104,6 +104,9 @@ article {
   border-bottom-right-radius: 1em;
 }
 
+article img {
+  max-width: 90%;
+}
 #diffBlock {
   background: white;
   padding: 2em;
@@ -141,6 +144,10 @@ button {
   text-decoration: none;
   display: inline-block;
   font-size: 16px;
+}
+
+.button-upload {
+  background-color: #4CAF50;
 }
 
 .button-edit {
@@ -193,4 +200,9 @@ tr:nth-child(even) {background-color: #f2f2f2;}
 
 #preview {
   background-color: #AF4C50;
+}
+
+#thumbnails {
+  display: flex;
+  flex-wrap: wrap;
 }

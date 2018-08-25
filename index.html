@@ -48,6 +48,11 @@
           <button id="submit">Submit</button>
           <button id="preview">Preview</button>
         </div>
+        <div id="files">
+          <div id="thumbnails"></div>
+          <input type="file" id="file">
+          <button id="upload" class="button-upload">Upload</button>
+        </div>
       </div>
     </div>
     <div>
@@ -74,6 +79,7 @@
   var loginButton = document.getElementById('login-button');
   var historyTable = document.getElementById("history");
   var diffBlock = document.getElementById("diffBlock");
+  var thumbnails = document.getElementById("thumbnails");
 
   var hasLocalChange = false;
   var converter = new showdown.Converter({tables: true, emoji: true});
@@ -232,12 +238,51 @@
       }
     });
   }
+
+  function loadThumbnails(offset){
+    getJSON("/api/thumbnails/" + offset, function(data){
+      for (e0 of data) {
+        (function(e){
+          var img = document.createElement("img");
+          img.src = e.src;
+          img.addEventListener("click", function(_e){
+            insertAtCaret(textEdit, " ![](/api/file/" + e.id + ")");
+          });
+          thumbnails.appendChild(img);
+        })(e0);
+      }
+    });
+  }
+
   var searchbox = document.getElementById("search-box");
   searchbox.addEventListener("change"
     , function(e){
       apus.printSearch(searchbox.value, document.getElementById("search-result"));
     });
 
+  document.getElementById("upload").addEventListener("click"
+    , function(e){
+      var reader = new FileReader();
+      var xhr = new XMLHttpRequest();
+      var file = document.getElementById("file").files[0];
+      xhr.open("POST", "/api/file", true);
+      xhr.setRequestHeader("Content-Type", file.type);
+      xhr.onreadystatechange = function(){
+        if (xhr.readyState === XMLHttpRequest.DONE) {
+          if (xhr.status === 200) {
+            loadThumbnails(0);
+          } else {
+            console.log(xhr);
+          }
+        }
+      }
+      reader.onload = function(event) {;
+        xhr.send(event.target.result);
+      };
+      reader.readAsArrayBuffer(file);
+    })
+
+  loadThumbnails(0);
   connect(1);
 
 </script>

@@ -1,10 +1,15 @@
 {-# LANGUAGE OverloadedLabels, ScopedTypeVariables, ViewPatterns #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Main where
 
 import RIO
+import Codec.Picture
+import Codec.Picture.Types
+import Codec.Picture.Extra
 import Control.Lens (lastOf, folded)
 import Control.Monad.Trans.Cont
 import Data.Aeson as J
+import qualified Data.ByteString.Base64 as Base64
 import Data.Time.Clock
 import Data.Winery
 import qualified Data.Sequence as Seq
@@ -21,6 +26,7 @@ import Network.Wai.Handler.WebSockets
 import Network.Wai.Middleware.Static
 import Network.WebSockets as WS
 import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.Lazy as BL
 import qualified Data.IntMap.Strict as IM
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
@@ -166,10 +172,66 @@ mainApp global@Global{..} = unsafeStaticPolicy (addBase "static")
               bs <- L.fetchPayload storage rp
               sendResp $ responseLBS status200 [] $ J.encode $ T.decodeUtf8 bs
             _ -> sendResp $ responseLBS status404 [] "Not found"
-    _ -> sendResp notFound
+    ["api", "file"] -> do
+      body <- lazyRequestBody req
+      case lookup "Content-Type" (Wai.requestHeaders req) of
+        Nothing -> sendResp $ badRequest "Content-Type not found"
+        Just typ -> case decodeImage $ BL.toStrict body of
+          Left err -> sendResp $ responseBuilder status400 []
+            $ getUtf8Builder $ fromString err
+          Right dimg -> case makeThumbnail dimg of
+            Nothing -> sendResp $ badRequest "Unsupported format"
+            Just timg -> do
+              L.commit storage $ do
+                L.insert "images" (typ, body)
+                L.insert "thumbnails" $ encodePng timg
+              sendResp $ responseLBS status200 [] "Success"
+    ["api", "file", readMaybe . T.unpack -> Just num] -> do
+      root <- L.fetchRoot storage
+      L.lookupSpine storage "images" root >>= \case
+        Nothing -> sendResp notFound
+        Just spine -> do
+          spine' <- L.dropSpine storage (L.spineLength spine - num) spine
+          result <- L.takeSpine storage 1 spine' []
+          case result of
+            [(_, rp)] -> do
+              (typ, body) <- decodeCurrent <$> L.fetchPayload storage rp
+              sendResp $ responseLBS status200 [("Content-Type", typ)] body
+            _ -> sendResp notFound
+    ["api", "thumbnails", readMaybe . T.unpack -> Just offset] -> do
+      root <- L.fetchRoot storage
+      L.lookupSpine storage "thumbnails" root >>= \case
+        Nothing -> sendResp notFound
+        Just spine -> do
+          let len = L.spineLength spine
+          spine' <- L.dropSpine storage offset spine
+          result <- L.takeSpine storage 15 spine' []
+          thumbnails <- forM (zip [len - offset, len - offset - 1..] result) $ \(i, (_, rp)) -> do
+            body <- T.decodeUtf8 . Base64.encode <$> L.fetchPayload storage rp
+            return $ J.object
+              [ "id" J..= i
+              , "src" J..= mappend "data:image/png;base64," body
+              ]
+          sendResp $ responseLBS status200 [] $ J.encode thumbnails
+    _ -> sendResp $ responseFile status200 [] "index.html" Nothing
   where
-    notFound = responseFile status200 [] "index.html" Nothing
+    notFound = responseLBS status404 [] "Not found"
+    badRequest = responseLBS status400 []
     Config{..} = config
+
+makeThumbnail :: DynamicImage -> Maybe (Image PixelRGBA8)
+makeThumbnail = \case
+  ImageRGBA8 img -> Just $ resize img
+  ImageRGB8 img -> Just $ promoteImage $ resize img
+  ImageYCbCr8 img -> Just $ promoteImage (convertImage $ resize img :: Image PixelRGB8)
+  _ -> Nothing
+  where
+    resize img
+      | w <= h = scaleBilinear (floor $ 128 * w / h) 128 img
+      | otherwise = scaleBilinear 128 (floor $ 128 * h / w) img
+      where
+        w = fromIntegral $ imageWidth img :: Double
+        h = fromIntegral $ imageHeight img
 
 main :: IO ()
 main = evalContT $ do
