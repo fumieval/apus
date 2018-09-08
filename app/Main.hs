@@ -174,8 +174,10 @@ main = evalContT $ do
   vUserInfo <- newTVarIO HM.empty
   vRecentChanges <- newTVarIO mempty
   storage <- ContT $ L.withLiszt dataPath
-  liftIO $ runTLS
-    (tlsSettings tlsCertificate tlsKey)
+  liftIO $ (case (tlsCertificate, tlsKey) of
+    (Just cert, Just key) -> runTLS
+      (tlsSettings cert key)
+    _ -> runSettings)
     (setPort port defaultSettings)
     $ websocketsOr defaultConnectionOptions
       (multiServer Global{..}) $ mainApp Global{..}

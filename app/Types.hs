@@ -23,8 +23,8 @@ data Config = Config
   , port :: Int
   , recentChangesCount :: Int
   , searchLimit :: Int
-  , tlsCertificate :: FilePath
-  , tlsKey :: FilePath
+  , tlsCertificate :: Maybe FilePath
+  , tlsKey :: Maybe FilePath
   } deriving Generic
 
 instance FromJSON Config
