@@ -6,3 +6,4 @@ dataDir: "data"
 recentChangesCount: 10
 tlsCertificate: localhost.crt
 tlsKey: localhost.key
+runtimeDir: /etc/apus

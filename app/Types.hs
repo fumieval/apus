@@ -25,6 +25,7 @@ data Config = Config
   , searchLimit :: Int
   , tlsCertificate :: Maybe FilePath
   , tlsKey :: Maybe FilePath
+  , runtimeDir :: FilePath
   } deriving Generic
 
 instance FromJSON Config

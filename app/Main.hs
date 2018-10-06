@@ -18,7 +18,7 @@ import Network.Wai as Wai
 import Network.Wai.Handler.Warp
 import Network.Wai.Handler.WarpTLS
 import Network.Wai.Handler.WebSockets
-import Network.Wai.Middleware.Static hiding ((<|>))
+import qualified Network.Wai.Middleware.Static as S
 import Network.WebSockets as WS
 import qualified Data.ByteString.Char8 as B
 import qualified Data.IntMap.Strict as IM
@@ -28,6 +28,7 @@ import qualified Data.Text.Encoding as T
 import qualified Data.Yaml as Yaml
 import qualified RIO.HashMap as HM
 import System.Environment
+import System.FilePath
 
 import qualified Api
 import Auth.GitHub
@@ -142,7 +143,8 @@ multiServer global@Global{..} pending = do
     name = T.decodeUtf8 $ B.drop 1 $ requestPath $ pendingRequest pending
 
 mainApp :: Global -> Application
-mainApp global@Global{..} = unsafeStaticPolicy (addBase "static")
+mainApp global@Global{..} = S.staticPolicy (S.addBase (runtimeDir </> "static")
+  S.>-> (S.hasSuffix "js" S.<|> S.hasSuffix "css"))
   $ \req sendResp -> case pathInfo req of
     ["auth-start"] -> authStart global sendResp
     ["auth-finish"] -> authFinish global req sendResp
@@ -153,7 +155,7 @@ mainApp global@Global{..} = unsafeStaticPolicy (addBase "static")
       ["file", T.decimal -> Right (offset, _)] -> Api.getFile global offset
       ["thumbnails", T.decimal -> Right (offset, _)] -> Api.getThumbnails global offset
       _ -> return $ responseLBS status404 [] "Not found"
-    _ -> sendResp $ responseFile status200 [] "index.html" Nothing
+    _ -> sendResp $ responseFile status200 [] (runtimeDir </> "index.html") Nothing
   where
     Config{..} = config
 
