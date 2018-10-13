@@ -31,6 +31,7 @@
         <div>
           <button id="edit" class="hidden button button-royal button-giant">Edit</button>
         </div>
+        <div id="lastUpdated"></div>
         <article id="articleContent">
           Loading...
         </article>
@@ -205,6 +206,12 @@
                 textEdit.value = PS.Main.lineDiff3(text)(original)(textEdit.value);
             }
             historyTable.innerHTML = "";
+            dat.contents[0].reverse();
+            if (dat.contents[0].length > 0)
+            {
+              document.getElementById("lastUpdated").innerText
+                = new Intl.DateTimeFormat().format(new Date(dat.contents[0][0].revTime));
+            }
             for (e0 of dat.contents[0]) {
               (function(e){
                 var item = document.createElement("tr");

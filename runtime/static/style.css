@@ -124,6 +124,11 @@ article img {
   border-bottom-right-radius: 1em;
 }
 
+#lastUpdated {
+  float: right;
+  margin: 1em;
+}
+
 textarea {
   text-rendering: auto;
   color: initial;
