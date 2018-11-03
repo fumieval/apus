@@ -50,6 +50,7 @@
         <div>
           <button id="submit" class="button button-action button-giant">Submit</button>
           <button id="preview" class="button button-caution button-giant">Preview</button>
+          <button id="cancel" class="button button-warning button-giant">Cancel</button>
         </div>
         <div id="files">
           <div>
@@ -141,6 +142,11 @@
 
     socket.addEventListener('open', function (event) {
       alert.classList.add("hidden");
+
+      document.getElementById("cancel").addEventListener('click', function(event){
+        editBlock.classList.add("hidden");
+        mainBlock.classList.remove("hidden");
+      });
 
       submitButton.addEventListener('click', function(event){
         socket.send(JSON.stringify({tag: "Submit", contents: textEdit.value}));
