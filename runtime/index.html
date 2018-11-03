@@ -109,8 +109,17 @@
 	  setTimeout(heartbeat, 10000, socket);
   }
 
+  if (location.protocol === 'https:') {
+    var wss = "wss://";
+    var https = "https://";
+  } else {
+    var wss = "ws://";
+    var https = "http://";
+  }
+
+
   function connect_menu(){
-    var socket = new WebSocket("wss://" + location.host + "/menu");
+    var socket = new WebSocket(wss + location.host + "/menu");
     socket.addEventListener('message', function (event) {
       dat = JSON.parse(event.data);
       switch(dat.tag) {
@@ -138,7 +147,7 @@
   connect_menu();
 
   function connect(interval){
-    var socket = new WebSocket("wss://" + location.host + location.pathname);
+    var socket = new WebSocket(wss + location.host + location.pathname);
 
     socket.addEventListener('open', function (event) {
       alert.classList.add("hidden");
@@ -166,7 +175,7 @@
 
     loginButton.innerText = "Login"
     loginButton.addEventListener('click', function (event){
-      var win = window.open("https://" + location.host + "/auth-start", "_blank"
+      var win = window.open(https + location.host + "/auth-start", "_blank"
         , "width=640,height=480");
       var timer = setInterval(function() {
         if(win.closed) {
