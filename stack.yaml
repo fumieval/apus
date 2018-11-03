@@ -79,3 +79,8 @@ image:
   container:
     name: "fumieval/apus"
     base: "fpco/ubuntu-with-libgmp"
+    add:
+      runtime: /etc/apus
+      scripts: /usr/local/bin
+    entrypoints:
+    - start.sh
